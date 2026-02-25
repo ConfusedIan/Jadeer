@@ -23,12 +23,21 @@ def forward_request(
     request: Request,
     target_url: str,
     body: bytes | None,
+    extra_headers: dict | None = None,
 ) -> Response:
     try:
+        headers = _filtered_headers(dict(request.headers))
+
+        if extra_headers:
+            headers.update(extra_headers)
+
+        if body is not None:
+            headers.setdefault("content-type", "application/json")
+
         res = requests.request(
             method=request.method,
             url=target_url,
-            headers=_filtered_headers(dict(request.headers)),
+            headers=headers,
             params=dict(request.query_params),
             data=body,
             timeout=REQUEST_TIMEOUT_SECONDS,
@@ -40,5 +49,6 @@ def forward_request(
             headers=_filtered_headers(dict(res.headers)),
             media_type=res.headers.get("content-type"),
         )
+
     except requests.RequestException as e:
         raise BadGatewayError(f"Upstream request failed: {str(e)}")
