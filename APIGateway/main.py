@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends,Request
 from fastapi.security import HTTPBearer
 from fastapi.openapi.utils import get_openapi
 from core.middleware import log_requests, auth_guard
@@ -50,6 +50,16 @@ app.middleware("http")(auth_guard)
 @app.get("/health", tags=["system"])
 def health():
     return {"status": "ok", "service": "api-gateway"}
+
+@app.get("/whoami", tags=["system"])
+def whoami(request: Request):
+    user = getattr(request.state, "user", None) or {}
+    raw = user.get("raw", {}) or {}
+    return {
+        "user_id": user.get("user_id"),
+        "email": raw.get("email"),
+        "role": raw.get("role"),
+    }
 
 # register routes
 app.include_router(profile_router)

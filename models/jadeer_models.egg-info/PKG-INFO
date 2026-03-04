@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: jadeer-models
+Version: 0.1.0
+Summary: Shared Pydantic models for Jadeer microservices
+Requires-Python: >=3.10
+Requires-Dist: pydantic>=2.0

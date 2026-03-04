@@ -2,11 +2,18 @@ import os
 from fastapi import FastAPI, Header, HTTPException
 from supabase import create_client, Client
 
-from pydantic import BaseModel
-from typing import Optional, List
-from uuid import UUID
-from datetime import date
+
 from fastapi.encoders import jsonable_encoder
+
+from dotenv import load_dotenv
+
+from models.profile import ProfileUpdate
+from models.experiences import ExperienceCreate, ExperienceUpdate
+from models.education import EducationCreate, EducationUpdate
+from models.certificates import CertificateCreate, CertificateUpdate
+from models.skills import SkillCreate, SkillUpdate
+
+load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -17,28 +24,6 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 app = FastAPI(title="Profile Service")
-
-class ProfileUpdate(BaseModel):
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    bio: Optional[str] = None
-    linkedin_url: Optional[str] = None
-    location: Optional[str] = None
-    languages: Optional[List[str]] = None
-
-class ExperienceCreate(BaseModel):
-    job_title: str
-    company: str
-    start_date: date
-    end_date: Optional[date] = None
-    description: Optional[str] = None
-
-class ExperienceUpdate(BaseModel):
-    job_title: Optional[str] = None
-    company: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    description: Optional[str] = None
 
 @app.get("/health", tags=["system"])
 def health():
@@ -119,4 +104,197 @@ def delete_experience(exp_id: str, x_user_id: str = Header(default=None, alias="
 
     if not res.data:
         raise HTTPException(status_code=404, detail="Experience not found")
+    return {"deleted": True}
+
+@app.get("/profile/me/education", tags=["education"])
+def list_my_education(x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    res = supabase.table("education").select("*").eq("candidate_id", x_user_id).execute()
+    return {"items": res.data or []}
+
+
+@app.post("/profile/me/education", tags=["education"])
+def add_education(payload: EducationCreate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    data = jsonable_encoder(payload)
+    data["candidate_id"] = x_user_id
+
+    res = supabase.table("education").insert(data).execute()
+    return {"created": True, "data": res.data}
+
+
+@app.put("/profile/me/education/{edu_id}", tags=["education"])
+def update_education(edu_id: str, payload: EducationUpdate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    update_data = {k: v for k, v in jsonable_encoder(payload).items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided")
+
+    res = (
+        supabase.table("education")
+        .update(update_data)
+        .eq("edu_id", edu_id)
+        .eq("candidate_id", x_user_id)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Education record not found")
+    return {"updated": True, "data": res.data}
+
+
+@app.delete("/profile/me/education/{edu_id}", tags=["education"])
+def delete_education(edu_id: str, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    res = (
+        supabase.table("education")
+        .delete()
+        .eq("edu_id", edu_id)
+        .eq("candidate_id", x_user_id)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Education record not found")
+    return {"deleted": True}
+
+@app.get("/profile/me/certificates", tags=["certificates"])
+def list_my_certificates(x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    res = supabase.table("certificates").select("*").eq("candidate_id", x_user_id).execute()
+    return {"items": res.data or []}
+
+
+@app.post("/profile/me/certificates", tags=["certificates"])
+def add_certificate(payload: CertificateCreate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    data = jsonable_encoder(payload)
+    data["candidate_id"] = x_user_id
+
+    res = supabase.table("certificates").insert(data).execute()
+    return {"created": True, "data": res.data}
+
+
+@app.put("/profile/me/certificates/{cert_id}", tags=["certificates"])
+def update_certificate(cert_id: str, payload: CertificateUpdate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    update_data = {k: v for k, v in jsonable_encoder(payload).items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided")
+
+    res = (
+        supabase.table("certificates")
+        .update(update_data)
+        .eq("cert_id", cert_id)
+        .eq("candidate_id", x_user_id)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    return {"updated": True, "data": res.data}
+
+
+@app.delete("/profile/me/certificates/{cert_id}", tags=["certificates"])
+def delete_certificate(cert_id: str, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    res = (
+        supabase.table("certificates")
+        .delete()
+        .eq("cert_id", cert_id)
+        .eq("candidate_id", x_user_id)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    return {"deleted": True}
+
+@app.get("/profile/me/skills", tags=["skills"])
+def list_my_skills(x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    res = supabase.table("skills").select("*").eq("candidate_id", x_user_id).execute()
+    return {"items": res.data or []}
+
+
+@app.post("/profile/me/skills", tags=["skills"])
+def add_skill(payload: SkillCreate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    data = jsonable_encoder(payload)
+
+    # Enforce your DB check rule in the API layer too (clear error message)
+    has_std = data.get("skill_id") is not None
+    has_custom = data.get("custom_skill_name") is not None
+    if has_std == has_custom:  # both true OR both false
+        raise HTTPException(status_code=400, detail="Provide exactly one of: skill_id OR custom_skill_name")
+
+    data["candidate_id"] = x_user_id
+
+    try:
+        res = supabase.table("skills").insert(data).execute()
+        return {"created": True, "data": res.data}
+    except Exception as e:
+        # unique(candidate_id, skill_id) will throw if duplicate
+        raise HTTPException(status_code=400, detail=f"Failed to add skill: {str(e)}")
+
+
+@app.put("/profile/me/skills/{row_id}", tags=["skills"])
+def update_skill(row_id: str, payload: SkillUpdate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    update_data = {k: v for k, v in jsonable_encoder(payload).items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided")
+
+    # Do not allow user to set is_verified here (system-only)
+
+    res = (
+        supabase.table("skills")
+        .update(update_data)
+        .eq("id", row_id)
+        .eq("candidate_id", x_user_id)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    return {"updated": True, "data": res.data}
+
+
+@app.delete("/profile/me/skills/{row_id}", tags=["skills"])
+def delete_skill(row_id: str, x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    res = (
+        supabase.table("skills")
+        .delete()
+        .eq("id", row_id)
+        .eq("candidate_id", x_user_id)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Skill not found")
     return {"deleted": True}
