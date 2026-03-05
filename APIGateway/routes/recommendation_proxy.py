@@ -7,5 +7,5 @@ router = APIRouter(prefix="/recommendation", tags=["recommendation"])
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def recommendation_proxy(request: Request, path: str):
     body = await request.body()
-    target_url = f"{SERVICES['RECOMMENDATION']}/recommendation/{path}"
+    target_url = f"{SERVICES['recommendation']}/recommendation/{path}"
     return forward_request(request, target_url, body)

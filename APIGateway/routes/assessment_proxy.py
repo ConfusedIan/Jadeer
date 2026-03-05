@@ -7,5 +7,5 @@ router = APIRouter(prefix="/assessment", tags=["assessment"])
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def assessment_proxy(request: Request, path: str):
     body = await request.body()
-    target_url = f"{SERVICES['ASSESSMENT']}/assessment/{path}"
+    target_url = f"{SERVICES['assessment']}/assessment/{path}"
     return forward_request(request, target_url, body)

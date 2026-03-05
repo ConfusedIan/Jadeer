@@ -1,19 +1,44 @@
+import json
+import logging
+import time
 from fastapi import FastAPI, Depends,Request
 from fastapi.security import HTTPBearer
 from fastapi.openapi.utils import get_openapi
+from fastapi.middleware.cors import CORSMiddleware
 from core.middleware import log_requests, auth_guard
-from config import APP_NAME
+from config import APP_NAME, CORS_ORIGINS
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps({
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        })
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(_JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 
 from routes.profile_proxy import router as profile_router
 from routes.assessment_proxy import router as assessment_router
 from routes.cv_proxy import router as cv_router
 from routes.recommendation_proxy import router as recommendation_router
 from routes.ranking_proxy import router as ranking_router
-from routes.cv_proxy import router as cv_router
 
 bearer_scheme = HTTPBearer()
 
 app = FastAPI(title=APP_NAME)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def custom_openapi():
     if app.openapi_schema:

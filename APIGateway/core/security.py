@@ -4,8 +4,8 @@ from core.exceptions import UnauthorizedError
 from jose import jwt, JWTError
 from config import SUPABASE_JWT_SECRET, SUPABASE_JWT_ALG
 
-SUPABASE_PROJECT_REF = os.getenv("SUPABASE_PROJECT_REF", "gnwryggrdrszdelonuei")
-JWKS_URL = f"https://gnwryggrdrszdelonuei.supabase.co/auth/v1/.well-known/jwks.json"
+SUPABASE_PROJECT_REF = os.environ["SUPABASE_PROJECT_REF"]
+JWKS_URL = f"https://{SUPABASE_PROJECT_REF}.supabase.co/auth/v1/.well-known/jwks.json"
 
 _cache = {"keys": None, "ts": 0}
 TTL = 3600
