@@ -1,10 +1,36 @@
-from fastapi import FastAPI, Header, Response, Query, HTTPException
+import json
+import logging
+import time
+from fastapi import FastAPI, Header, Response, Query, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from clients.profile_client import get_profile_bundle
 from utils.merge import dummy_bundle, merge_real_with_dummy
 from templates.ats_reportlab import generate_cv_pdf
 
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps({
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        })
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(_JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
+
 app = FastAPI(title="CV Generation Service", version="0.2.1")
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail, "code": exc.status_code})
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content={"error": "Internal server error", "code": 500})
 
 
 @app.get("/cv/health", tags=["system"])
