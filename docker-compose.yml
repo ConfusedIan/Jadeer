@@ -1,0 +1,40 @@
+services:
+  profile_service:
+    build:
+      context: .
+      dockerfile: Profile_Service/Dockerfile
+    ports:
+      - "5002:5002"
+    env_file:
+      - Profile_Service/.env
+    restart: unless-stopped
+
+  cv_service:
+    build:
+      context: .
+      dockerfile: CV_Service/Dockerfile
+    ports:
+      - "5004:5004"
+    env_file:
+      - CV_Service/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+    depends_on:
+      - profile_service
+    restart: unless-stopped
+
+  api_gateway:
+    build:
+      context: .
+      dockerfile: APIGateway/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - APIGateway/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+      - CV_SERVICE_URL=http://cv_service:5004
+    depends_on:
+      - profile_service
+      - cv_service
+    restart: unless-stopped

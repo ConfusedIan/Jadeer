@@ -8,6 +8,9 @@ start cmd /k "cd APIGateway & venv\Scripts\activate & uvicorn main:app --reload 
 echo Starting Profile Service...
 start cmd /k "cd Profile_Service && venv\Scripts\activate && uvicorn main:app --reload --port 5002"
 
+echo Starting CV Service...
+start cmd /k "cd CV_Service && venv\Scripts\activate && uvicorn main:app --reload --port 5004"
+
 echo.
 echo Opening Swagger...
 timeout /t 4 /nobreak >nul
