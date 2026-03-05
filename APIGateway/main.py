@@ -9,6 +9,7 @@ from routes.assessment_proxy import router as assessment_router
 from routes.cv_proxy import router as cv_router
 from routes.recommendation_proxy import router as recommendation_router
 from routes.ranking_proxy import router as ranking_router
+from routes.cv_proxy import router as cv_router
 
 bearer_scheme = HTTPBearer()
 

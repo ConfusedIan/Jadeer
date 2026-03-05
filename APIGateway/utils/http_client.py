@@ -28,6 +28,9 @@ def forward_request(
     try:
         headers = _filtered_headers(dict(request.headers))
 
+        headers.pop("x-user-id", None)
+        headers.pop("X-User-Id", None)
+
         if extra_headers:
             headers.update(extra_headers)
 
