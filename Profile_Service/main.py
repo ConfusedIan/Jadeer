@@ -1,11 +1,26 @@
 import os
-from fastapi import FastAPI, Header, HTTPException
+import json
+import logging
+import time
+from fastapi import FastAPI, Header, HTTPException, Request, Query
+from fastapi.responses import JSONResponse
 from supabase import create_client, Client
-
-
 from fastapi.encoders import jsonable_encoder
-
 from dotenv import load_dotenv
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps({
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        })
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(_JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 
 from models.profile import ProfileUpdate
 from models.experiences import ExperienceCreate, ExperienceUpdate
@@ -25,9 +40,37 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 app = FastAPI(title="Profile Service")
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail, "code": exc.status_code})
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content={"error": "Internal server error", "code": 500})
+
 @app.get("/health", tags=["system"])
 def health():
     return {"status": "ok", "service": "profile"}
+
+@app.get("/profile/me/bundle", tags=["profile"])
+def get_profile_bundle(x_user_id: str = Header(default=None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    profile_res = supabase.table("profiles").select("*").eq("id", x_user_id).maybe_single().execute()
+    experiences_res = supabase.table("experiences").select("*").eq("candidate_id", x_user_id).execute()
+    education_res = supabase.table("education").select("*").eq("candidate_id", x_user_id).execute()
+    certificates_res = supabase.table("certificates").select("*").eq("candidate_id", x_user_id).execute()
+    skills_res = supabase.table("skills").select("*").eq("candidate_id", x_user_id).execute()
+
+    return {
+        "profile": profile_res.data or {},
+        "experiences": experiences_res.data or [],
+        "education": education_res.data or [],
+        "certificates": certificates_res.data or [],
+        "skills": skills_res.data or [],
+    }
+
 
 @app.get("/profile/me", tags=["profile"])
 def get_me(x_user_id: str = Header(default=None, alias="X-User-Id")):
@@ -54,12 +97,16 @@ def update_me(payload: ProfileUpdate, x_user_id: str = Header(default=None, alia
     return {"updated": True, "data": res.data}
 
 @app.get("/profile/me/experiences", tags=["experience"])
-def list_my_experiences(x_user_id: str = Header(default=None, alias="X-User-Id")):
+def list_my_experiences(
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
-    res = supabase.table("experiences").select("*").eq("candidate_id", x_user_id).execute()
-    return {"items": res.data or []}
+    res = supabase.table("experiences").select("*").eq("candidate_id", x_user_id).range(offset, offset + limit - 1).execute()
+    return {"items": res.data or [], "limit": limit, "offset": offset}
 
 @app.post("/profile/me/experiences", tags=["experience"])
 def add_experience(payload: ExperienceCreate, x_user_id: str = Header(default=None, alias="X-User-Id")):
@@ -107,12 +154,16 @@ def delete_experience(exp_id: str, x_user_id: str = Header(default=None, alias="
     return {"deleted": True}
 
 @app.get("/profile/me/education", tags=["education"])
-def list_my_education(x_user_id: str = Header(default=None, alias="X-User-Id")):
+def list_my_education(
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
-    res = supabase.table("education").select("*").eq("candidate_id", x_user_id).execute()
-    return {"items": res.data or []}
+    res = supabase.table("education").select("*").eq("candidate_id", x_user_id).range(offset, offset + limit - 1).execute()
+    return {"items": res.data or [], "limit": limit, "offset": offset}
 
 
 @app.post("/profile/me/education", tags=["education"])
@@ -167,12 +218,16 @@ def delete_education(edu_id: str, x_user_id: str = Header(default=None, alias="X
     return {"deleted": True}
 
 @app.get("/profile/me/certificates", tags=["certificates"])
-def list_my_certificates(x_user_id: str = Header(default=None, alias="X-User-Id")):
+def list_my_certificates(
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
-    res = supabase.table("certificates").select("*").eq("candidate_id", x_user_id).execute()
-    return {"items": res.data or []}
+    res = supabase.table("certificates").select("*").eq("candidate_id", x_user_id).range(offset, offset + limit - 1).execute()
+    return {"items": res.data or [], "limit": limit, "offset": offset}
 
 
 @app.post("/profile/me/certificates", tags=["certificates"])
@@ -227,12 +282,16 @@ def delete_certificate(cert_id: str, x_user_id: str = Header(default=None, alias
     return {"deleted": True}
 
 @app.get("/profile/me/skills", tags=["skills"])
-def list_my_skills(x_user_id: str = Header(default=None, alias="X-User-Id")):
+def list_my_skills(
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
-    res = supabase.table("skills").select("*").eq("candidate_id", x_user_id).execute()
-    return {"items": res.data or []}
+    res = supabase.table("skills").select("*").eq("candidate_id", x_user_id).range(offset, offset + limit - 1).execute()
+    return {"items": res.data or [], "limit": limit, "offset": offset}
 
 
 @app.post("/profile/me/skills", tags=["skills"])
