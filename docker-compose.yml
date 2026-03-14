@@ -23,6 +23,20 @@ services:
       - profile_service
     restart: unless-stopped
 
+  recommendation_service:
+    build:
+      context: .
+      dockerfile: Recommendation_Service/Dockerfile
+    ports:
+      - "5005:5005"
+    env_file:
+      - Recommendation_Service/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+    depends_on:
+      - profile_service
+    restart: unless-stopped
+
   api_gateway:
     build:
       context: .
@@ -34,7 +48,9 @@ services:
     environment:
       - PROFILE_SERVICE_URL=http://profile_service:5002
       - CV_SERVICE_URL=http://cv_service:5004
+      - RECOMMENDATION_SERVICE_URL=http://recommendation_service:5005
     depends_on:
       - profile_service
       - cv_service
+      - recommendation_service
     restart: unless-stopped
