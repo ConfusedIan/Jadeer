@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from database import get_db, Certificate, Issuer, VerificationStatus
 from schemas import CertificateRequest, CertificateResponse
@@ -21,7 +21,13 @@ VERIFIERS = {
 
 
 @router.post("", response_model=CertificateResponse, status_code=201)
-def submit_certificate(body: CertificateRequest, db: Session = Depends(get_db)):
+def submit_certificate(
+    body: CertificateRequest,
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
     if db.query(Certificate).filter(Certificate.certificate_id == body.certificate_id).first():
         raise HTTPException(status_code=409, detail="Certificate already exists.")
@@ -67,17 +73,34 @@ def submit_certificate(body: CertificateRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/issuers", response_model=list[dict])
-def list_issuers(db: Session = Depends(get_db)):
+def list_issuers(
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
     return [{"issuer_id": i.issuer_id, "issuer_name": i.issuer_name} for i in db.query(Issuer).all()]
 
 
 @router.get("/candidate/{candidate_id}", response_model=list[CertificateResponse])
-def get_candidate_certificates(candidate_id: UUID, db: Session = Depends(get_db)):
+def get_candidate_certificates(
+    candidate_id: UUID,
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
     return db.query(Certificate).filter(Certificate.candidate_id == candidate_id).all()
 
 
 @router.get("/{certificate_id}", response_model=CertificateResponse)
-def get_certificate(certificate_id: str, db: Session = Depends(get_db)):
+def get_certificate(
+    certificate_id: str,
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(default=None, alias="X-User-Id"),
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
     cert = db.query(Certificate).filter(Certificate.certificate_id == certificate_id).first()
     if not cert:
         raise HTTPException(status_code=404, detail="Certificate not found.")
