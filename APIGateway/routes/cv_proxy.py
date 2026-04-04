@@ -1,4 +1,7 @@
+import json
+from typing import Dict, Optional
 from fastapi import APIRouter, Request
+from pydantic import BaseModel
 from services.service_registry import SERVICES
 from utils.http_client import forward_request
 
@@ -12,6 +15,20 @@ def _target(path: str) -> str:
     return f"{SERVICES['cv'].rstrip('/')}/cv/{path}"
 
 
+class CVRequest(BaseModel):
+    include_experience: bool = True
+    include_education: bool = True
+    include_certificates: bool = True
+    include_skills: bool = True
+    include_scores: bool = True
+    include_verified_badges: bool = True
+    custom_bio: Optional[str] = None
+    experience_overrides: Optional[Dict[int, str]] = None
+    skill_threshold: float = 70.0
+    save_to_history: bool = False
+    cv_name: Optional[str] = None
+
+
 @router.get("/health")
 async def cv_health(request: Request):
     return forward_request(request, _target("health"), None, _user_header(request))
@@ -23,9 +40,8 @@ async def cv_get_pdf(request: Request):
 
 
 @router.post("/me.pdf")
-async def cv_post_pdf(request: Request):
-    body = await request.body()
-    return forward_request(request, _target("me.pdf"), body, _user_header(request))
+async def cv_post_pdf(body: CVRequest, request: Request):
+    return forward_request(request, _target("me.pdf"), json.dumps(body.model_dump()).encode(), _user_header(request))
 
 
 @router.get("/history")
