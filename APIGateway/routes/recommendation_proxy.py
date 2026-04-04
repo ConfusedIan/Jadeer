@@ -4,8 +4,26 @@ from utils.http_client import forward_request
 
 router = APIRouter(prefix="/recommendation", tags=["recommendation"])
 
-@router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def recommendation_proxy(request: Request, path: str):
+def _user_header(request: Request) -> dict:
+    user = getattr(request.state, "user", {}) or {}
+    return {"X-User-Id": user.get("user_id", "")}
+
+def _target(path: str) -> str:
+    return f"{SERVICES['recommendation'].rstrip('/')}/recommendation/{path}"
+
+
+@router.get("/health")
+async def recommendation_health(request: Request):
+    return forward_request(request, _target("health"), None, _user_header(request))
+
+
+@router.post("/analyze")
+async def recommendation_analyze(request: Request):
     body = await request.body()
-    target_url = f"{SERVICES['recommendation']}/recommendation/{path}"
-    return forward_request(request, target_url, body)
+    return forward_request(request, _target("analyze"), body, _user_header(request))
+
+
+@router.post("/generate-bio")
+async def recommendation_generate_bio(request: Request):
+    body = await request.body()
+    return forward_request(request, _target("generate-bio"), body, _user_header(request))

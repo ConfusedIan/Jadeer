@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 APP_NAME = "API Gateway"
 HOST = os.getenv("GATEWAY_HOST", "0.0.0.0")

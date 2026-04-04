@@ -1,7 +1,11 @@
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.colors import Color, black, grey
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
+
+_GREEN = Color(0.1, 0.6, 0.1)
+_GREY = Color(0.5, 0.5, 0.5)
 
 LEFT, RIGHT, TOP, BOTTOM = 50, 50, 60, 50
 FONT, FONT_BOLD = "Helvetica", "Helvetica-Bold"
@@ -50,6 +54,7 @@ def generate_cv_pdf(
     include_skills: bool,
     include_scores: bool,
     include_verified_badges: bool,
+    skill_threshold: float = 70.0,
 ) -> bytes:
     profile = data.get("profile", {}) or {}
     experiences = data.get("experiences", []) or []
@@ -180,20 +185,30 @@ def generate_cv_pdf(
             issuer = cert.get("issuer") or ""
             issue_date = _date_only(cert.get("issue_date"))
 
-            badge = ""
-            if include_verified_badges:
-                badge = "Verified" if cert.get("is_verified") else "Unverified"
-
-            line = name
+            cert_line = name
             if issuer:
-                line += f" — {issuer}"
+                cert_line += f" — {issuer}"
             if issue_date:
-                line += f" ({issue_date})"
-            if badge:
-                line += f" [{badge}]"
+                cert_line += f" ({issue_date})"
 
-            c.setFont(FONT, 10)
-            y = _wrap_text(c, "• " + line, LEFT + 8, y, max_width - 8, FONT, 10, 12)
+            if include_verified_badges:
+                is_verified = cert.get("is_verified")
+                badge_text = "✓ Verified" if is_verified else "○ Not Verified"
+                badge_color = _GREEN if is_verified else _GREY
+                badge_width = stringWidth(badge_text, FONT, 9) + 4
+
+                # Draw badge right-aligned
+                c.setFont(FONT, 9)
+                c.setFillColor(badge_color)
+                c.drawString(LEFT + max_width - badge_width, y, badge_text)
+                c.setFillColor(black)
+
+                # Draw cert text constrained so it doesn't overlap badge
+                avail_width = max_width - badge_width - 12
+                y = _wrap_text(c, "• " + cert_line, LEFT + 8, y, avail_width, FONT, 10, 12)
+            else:
+                c.setFont(FONT, 10)
+                y = _wrap_text(c, "• " + cert_line, LEFT + 8, y, max_width - 8, FONT, 10, 12)
 
         y -= 6
 
@@ -202,20 +217,33 @@ def generate_cv_pdf(
         section("Skills")
 
         items = []
+        has_assessed = False
         for s in skills:
             name = s.get("custom_skill_name") or s.get("name") or "Skill"
             score = s.get("score")
             if include_scores and score is not None:
                 try:
-                    items.append(f"{name} ({int(score)}/100)")
+                    score_int = int(score)
+                    if score_int >= skill_threshold:
+                        items.append(f"{name} ({score_int}/100 \u2605)")
+                        has_assessed = True
+                    else:
+                        items.append(f"{name} ({score_int}/100)")
                 except Exception:
                     items.append(name)
             else:
                 items.append(name)
 
-        # Cleaner than commas: " • " separators
-        skills_text = " • ".join(items)
+        skills_text = " \u2022 ".join(items)
         y = _wrap_text(c, skills_text, LEFT, y, max_width, FONT, 10, 13)
+
+        if has_assessed:
+            y -= 4
+            c.setFont(FONT, 8)
+            c.setFillColor(_GREY)
+            c.drawString(LEFT, y, "\u2605 = Score verified by platform assessment")
+            c.setFillColor(black)
+            y -= 10
 
     c.showPage()
     c.save()

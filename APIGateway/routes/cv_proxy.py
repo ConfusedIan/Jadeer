@@ -5,25 +5,39 @@ from utils.http_client import forward_request
 router = APIRouter(prefix="/cv", tags=["cv"])
 
 def _user_header(request: Request) -> dict:
-    return {"X-User-Id": request.state.user["user_id"]}
+    user = getattr(request.state, "user", {}) or {}
+    return {"X-User-Id": user.get("user_id", "")}
 
-def _target(path: str = "") -> str:
-    base = SERVICES["cv"].rstrip("/")   # http://127.0.0.1:5004
-    if path:
-        return f"{base}/cv/{path}"
-    return f"{base}/cv"
+def _target(path: str) -> str:
+    return f"{SERVICES['cv'].rstrip('/')}/cv/{path}"
+
 
 @router.get("/health")
 async def cv_health(request: Request):
-    body = await request.body()
-    return forward_request(request, _target("health"), body if body else None, _user_header(request))
+    return forward_request(request, _target("health"), None, _user_header(request))
+
 
 @router.get("/me.pdf")
-async def cv_me_pdf(request: Request):
-    body = await request.body()
-    return forward_request(request, _target("me.pdf"), body if body else None, _user_header(request))
+async def cv_get_pdf(request: Request):
+    return forward_request(request, _target("me.pdf"), None, _user_header(request))
 
-@router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def cv_proxy(request: Request, path: str):
+
+@router.post("/me.pdf")
+async def cv_post_pdf(request: Request):
     body = await request.body()
-    return forward_request(request, _target(path), body if body else None, _user_header(request))
+    return forward_request(request, _target("me.pdf"), body, _user_header(request))
+
+
+@router.get("/history")
+async def cv_history_list(request: Request):
+    return forward_request(request, _target("history"), None, _user_header(request))
+
+
+@router.get("/history/{cv_id}")
+async def cv_history_download(cv_id: str, request: Request):
+    return forward_request(request, _target(f"history/{cv_id}"), None, _user_header(request))
+
+
+@router.get("/demo.pdf")
+async def cv_demo_pdf(request: Request):
+    return forward_request(request, _target("demo.pdf"), None, _user_header(request))

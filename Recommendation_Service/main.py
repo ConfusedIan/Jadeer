@@ -5,8 +5,11 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from typing import List
+
 from clients.profile_client import get_profile_bundle
 from services.advisor_service import analyze_cv
+from services.bio_service import generate_bio
 
 
 class _JsonFormatter(logging.Formatter):
@@ -44,6 +47,10 @@ class AnalyzeRequest(BaseModel):
     job_description: str
 
 
+class BioRequest(BaseModel):
+    keywords: List[str]
+
+
 @app.post("/recommendation/analyze", tags=["recommendation"])
 async def analyze(
     body: AnalyzeRequest,
@@ -64,3 +71,20 @@ async def analyze(
     bundle = await get_profile_bundle(x_user_id)
     result = await analyze_cv(x_user_id, bundle, body.job_description)
     return result
+
+
+@app.post("/recommendation/generate-bio", tags=["recommendation"])
+async def generate_bio_endpoint(
+    body: BioRequest,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+):
+    """
+    Generate a professional bio from the user's profile and optional keywords.
+    Returns plain text to be used in CV generation or shown in the CV editor for review/editing.
+    """
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+
+    bundle = await get_profile_bundle(x_user_id)
+    bio = await generate_bio(bundle, body.keywords)
+    return {"bio": bio}

@@ -2,4 +2,4 @@ fastapi
 uvicorn[standard]
 reportlab
 python-dotenv
-httpx
+httpxsupabase==2.9.0

@@ -1,10 +1,12 @@
 import json
 import logging
 import time
-from fastapi import FastAPI, Depends,Request
+from pathlib import Path
+from fastapi import FastAPI, Depends, Request
 from fastapi.security import HTTPBearer
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from core.middleware import log_requests, auth_guard
 from config import APP_NAME, CORS_ORIGINS
 
@@ -93,3 +95,8 @@ app.include_router(assessment_router)
 app.include_router(cv_router)
 app.include_router(recommendation_router)
 app.include_router(ranking_router)
+
+# dev test UI — served at http://localhost:8000/dev/
+_dev_dir = Path(__file__).parent.parent / "dev"
+_dev_dir.mkdir(exist_ok=True)
+app.mount("/dev", StaticFiles(directory=str(_dev_dir), html=True), name="dev")
