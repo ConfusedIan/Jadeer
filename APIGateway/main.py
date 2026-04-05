@@ -11,6 +11,7 @@ from core.middleware import log_requests, auth_guard
 from config import APP_NAME, CORS_ORIGINS
 
 
+
 class _JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         return json.dumps({
@@ -29,6 +30,7 @@ from routes.assessment_proxy import router as assessment_router
 from routes.cv_proxy import router as cv_router
 from routes.recommendation_proxy import router as recommendation_router
 from routes.ranking_proxy import router as ranking_router
+from routes.cert_proxy import router as cert_router
 
 bearer_scheme = HTTPBearer()
 
@@ -95,6 +97,7 @@ app.include_router(assessment_router)
 app.include_router(cv_router)
 app.include_router(recommendation_router)
 app.include_router(ranking_router)
+app.include_router(cert_router)
 
 # dev test UI — served at http://localhost:8000/dev/
 _dev_dir = Path(__file__).parent.parent / "dev"
