@@ -1,2 +1,9 @@
 openai
 python-dotenv
+streamlit
+pandas
+openpyxl
+fastapi
+uvicorn[standard]
+supabase
+pydantic
