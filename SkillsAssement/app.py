@@ -594,17 +594,17 @@ def root():
         "service": "O*NET Soft Skills Assessment API",
         "version": "1.0.0",
         "endpoints": [
-            "POST /api/match-occupation",
-            "POST /api/generate-assessment",
-            "POST /api/evaluate",
-            "POST /api/full-assessment",
-            "GET /api/skills-list",
-            "GET /api/occupations",
+            "POST /assessment/match-occupation",
+            "POST /assessment/generate-assessment",
+            "POST /assessment/evaluate",
+            "POST /assessment/full-assessment",
+            "GET /assessment/skills-list",
+            "GET /assessment/occupations",
         ],
     }
 
 
-@app.get("/api/skills-list")
+@app.get("/assessment/skills-list")
 def list_skills():
     """List all 14 O*NET soft skills available for assessment."""
     return {
@@ -614,7 +614,7 @@ def list_skills():
     }
 
 
-@app.get("/api/occupations")
+@app.get("/assessment/occupations")
 def list_occupations():
     """List all available O*NET occupations."""
     return {
@@ -623,7 +623,7 @@ def list_occupations():
     }
 
 
-@app.post("/api/match-occupation")
+@app.post("/assessment/match-occupation")
 def match_occupation(authorization: str = Header(...)):
     """
     Pull user data from Supabase and match to the closest O*NET occupation.
@@ -692,7 +692,7 @@ def match_occupation(authorization: str = Header(...)):
     }
 
 
-@app.post("/api/generate-assessment")
+@app.post("/assessment/generate-assessment")
 def api_generate_assessment(req: AssessmentRequest):
     """
     Generate 5 scenario-based MCQ questions for a given occupation + skill.
@@ -746,7 +746,7 @@ def api_generate_assessment(req: AssessmentRequest):
     }
 
 
-@app.post("/api/evaluate")
+@app.post("/assessment/evaluate")
 def api_evaluate(req: EvaluateRequest, authorization: Optional[str] = Header(None)):
     """
     Evaluate answers and return assessment_results-compatible output.
@@ -843,7 +843,7 @@ def api_evaluate(req: EvaluateRequest, authorization: Optional[str] = Header(Non
 
 
 # ── Full Assessment Endpoint ─────────────────────────────────────────────────
-@app.post("/api/full-assessment")
+@app.post("/assessment/full-assessment")
 def api_full_assessment(req: FullAssessmentRequest, authorization: Optional[str] = Header(None)):
     """
     Run the full assessment pipeline in one call.

@@ -46,6 +46,20 @@ services:
       env_file:
         - Cert_Ver_Service/.env
       restart: unless-stopped
+
+  skills_assessment:
+    build:
+      context: .
+      dockerfile: SkillsAssement/Dockerfile
+    ports:
+      - "5003:5003"
+    env_file:
+      - SkillsAssement/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+    depends_on:
+      - profile_service
+    restart: unless-stopped
     
   api_gateway:
     build:
@@ -60,9 +74,11 @@ services:
       - CV_SERVICE_URL=http://cv_service:5004
       - RECOMMENDATION_SERVICE_URL=http://recommendation_service:5005
       - CERT_SERVICE_URL=http://cert_service:5006
+      - ASSESSMENT_SERVICE_URL=http://skills_assessment:5003
     depends_on:
       - profile_service
       - cv_service
       - recommendation_service
       - cert_service
+      - skills_assessment
     restart: unless-stopped
