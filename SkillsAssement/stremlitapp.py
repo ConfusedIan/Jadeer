@@ -1,1023 +1,1042 @@
-import os
-import json
-import re
-import csv
-import io
-import pandas as pd
 import streamlit as st
-from openai import OpenAI
-from dotenv import load_dotenv
+import time
 
-load_dotenv()
-
-# ── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="O*NET Soft Skills Assessment",
-    page_icon="🎯",
+    page_title="Jadeer",
+    page_icon="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>J</text></svg>",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ───────────────────────────────────────────────────────────────
+# ─── Global CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-:root {
-    --primary: #6C5CE7;
-    --primary-dark: #5A4BD1;
-    --secondary: #00CEC9;
-    --accent: #FD79A8;
-    --bg-dark: #0F0E17;
-    --bg-card: #1A1A2E;
-    --text-primary: #FFFFFE;
-    --text-secondary: #FFFFFE;
-    --success: #00B894;
-    --danger: #FF6B6B;
-    --warning: #FDCB6E;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
 }
 
-.stApp {
-    background: linear-gradient(135deg, var(--bg-dark) 0%, #16213E 50%, #0F3460 100%);
+.stApp { background: #f7f8fa; }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: #fff;
+    border-right: 1px solid #e8eaed;
+    min-width: 220px !important;
+    max-width: 220px !important;
+}
+[data-testid="stSidebar"] > div { padding-top: 0 !important; }
+
+/* Hide default radio bullets */
+[data-testid="stSidebar"] .stRadio [role="radiogroup"] { gap: 2px; }
+[data-testid="stSidebar"] .stRadio label {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #4a5568;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    width: 100%;
+}
+[data-testid="stSidebar"] .stRadio label:hover { background: #f0f4ff; color: #2d3748; }
+[data-testid="stSidebar"] .stRadio [aria-checked="true"] + label,
+[data-testid="stSidebar"] .stRadio label[data-checked="true"] { background: #eef2ff; color: #3b5bdb; font-weight: 600; }
+[data-testid="stSidebar"] .stRadio [data-baseweb="radio"] > div:first-child { display: none !important; }
+
+/* ── Main content area ── */
+.main .block-container {
+    padding: 28px 32px 40px 32px !important;
+    max-width: 1100px;
+}
+
+/* ── Cards ── */
+.jd-card {
+    background: #fff;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 16px;
+}
+.jd-card-flat {
+    background: #fff;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+/* ── Typography ── */
+.jd-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1d23;
+    letter-spacing: -0.3px;
+    margin-bottom: 2px;
+}
+.jd-page-sub {
+    font-size: 13px;
+    color: #8a93a2;
+    margin-bottom: 22px;
+}
+.jd-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1d23;
+    letter-spacing: -0.1px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+    color: #8a93a2;
+}
+.jd-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8a93a2;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 4px;
+}
+.jd-value {
+    font-size: 14px;
+    color: #1a1d23;
+    font-weight: 500;
+}
+
+/* ── Metric tiles ── */
+.jd-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.jd-metric {
+    background: #fff;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    padding: 18px 20px;
+    text-align: center;
+}
+.jd-metric-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: #3b5bdb;
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.jd-metric-label {
+    font-size: 12px;
+    color: #8a93a2;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+/* ── Badges ── */
+.jd-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+.jd-badge-blue   { background: #eef2ff; color: #3b5bdb; }
+.jd-badge-green  { background: #ebfbee; color: #2f9e44; }
+.jd-badge-amber  { background: #fff9db; color: #e67700; }
+.jd-badge-red    { background: #fff5f5; color: #e03131; }
+.jd-badge-gray   { background: #f3f4f6; color: #6b7280; }
+
+/* ── Priority dots ── */
+.dot-high   { color: #3b5bdb; }
+.dot-medium { color: #e67700; }
+.dot-low    { color: #adb5bd; }
+
+/* ── Progress bar ── */
+.jd-bar-wrap { margin-bottom: 11px; }
+.jd-bar-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+}
+.jd-bar-track {
+    height: 6px;
+    background: #f3f4f6;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.jd-bar-fill {
+    height: 6px;
+    border-radius: 3px;
+    background: #3b5bdb;
+}
+
+/* ── Divider ── */
+.jd-divider { border: none; border-top: 1px solid #f0f1f3; margin: 16px 0; }
+
+/* ── Timeline entries ── */
+.jd-entry { display: flex; gap: 14px; margin-bottom: 20px; }
+.jd-entry-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: #f0f4ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0; color: #3b5bdb;
+    font-weight: 700; font-size: 13px;
+}
+.jd-entry-title { font-size: 14px; font-weight: 600; color: #1a1d23; }
+.jd-entry-sub   { font-size: 13px; color: #6b7280; margin-top: 1px; }
+.jd-entry-date  { font-size: 12px; color: #adb5bd; margin-top: 2px; }
+.jd-entry-desc  { font-size: 13px; color: #4b5563; margin-top: 6px; line-height: 1.55; }
+
+/* ── Profile header ── */
+.jd-profile-banner {
+    height: 80px;
+    background: linear-gradient(120deg, #3b5bdb 0%, #1971c2 100%);
+}
+.jd-profile-body { padding: 0 24px 22px 24px; }
+.jd-avatar {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: #fff; border: 3px solid #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: -34px;
+    font-size: 26px; font-weight: 700; color: #3b5bdb;
     font-family: 'Inter', sans-serif;
 }
+.jd-profile-name { font-size: 20px; font-weight: 700; color: #1a1d23; margin-top: 10px; }
+.jd-profile-headline { font-size: 14px; color: #4b5563; margin-top: 3px; }
+.jd-profile-meta { font-size: 12px; color: #9ca3af; margin-top: 5px; }
 
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #1A1A2E 0%, #16213E 100%);
-    border-right: 1px solid rgba(108, 92, 231, 0.2);
-}
-section[data-testid="stSidebar"] .stMarkdown h1,
-section[data-testid="stSidebar"] .stMarkdown h2,
-section[data-testid="stSidebar"] .stMarkdown h3 {
-    color: var(--text-primary);
-}
-
-/* Force ALL text to white — override Streamlit default grays */
-/* BUT exclude selectbox/select internals so selected values stay visible */
-.stApp, .stApp p, .stApp span, .stApp label,
-.stApp .stMarkdown, .stApp .stMarkdown p, .stApp .stMarkdown li,
-.stApp .stCaption, .stApp small,
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] small,
-section[data-testid="stSidebar"] .stCaption,
-[data-testid="stWidgetLabel"] label,
-[data-testid="stWidgetLabel"] p,
-[data-testid="stWidgetLabel"] div,
-.stSelectbox label, .stMultiSelect label, .stRadio label,
-.stTextArea label, .stTextInput label,
-.stSelectbox [data-testid="stWidgetLabel"],
-.stRadio [data-testid="stWidgetLabel"],
-[class*="caption"], [class*="helper"] {
-    color: #FFFFFE !important;
-}
-
-/* General div white rule — exclude selectbox internals */
-.stApp div:not([data-baseweb="select"] *):not([data-baseweb="popover"] *):not([data-baseweb="menu"] *),
-section[data-testid="stSidebar"] div:not([data-baseweb="select"] *):not([data-baseweb="popover"] *):not([data-baseweb="menu"] *) {
-    color: #FFFFFE !important;
-}
-
-/* ── SELECTBOX: force selected value text to BLACK ─────────────────────── */
-.stApp .stSelectbox [data-baseweb="select"] div,
-.stApp .stSelectbox [data-baseweb="select"] span,
-.stApp .stMultiSelect [data-baseweb="select"] div,
-.stApp .stMultiSelect [data-baseweb="select"] span,
-section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] div,
-section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span,
-section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] div,
-section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] span {
-    color: #1a1a2e !important;
-}
-
-/* Keep placeholder text gray */
-.stSelectbox input::placeholder,
-.stMultiSelect input::placeholder,
-.stTextArea textarea::placeholder,
-.stTextInput input::placeholder,
-[data-baseweb="select"] input::placeholder {
-    color: #8b8fa3 !important;
-}
-
-/* Dropdown menu list items — black text on white background */
-[data-baseweb="popover"] li,
-[data-baseweb="popover"] li span,
-[data-baseweb="popover"] li div,
-[data-baseweb="menu"] li,
-[data-baseweb="menu"] li span,
-[data-baseweb="menu"] li div,
-ul[role="listbox"] li,
-ul[role="listbox"] li span,
-ul[role="listbox"] li div {
-    color: #000000 !important;
-}
-
-/* Radio button option labels — keep white */
-.stRadio [data-baseweb="radio"] label,
-.stRadio [data-baseweb="radio"] label span,
-.stRadio [data-baseweb="radio"] label div {
-    color: #FFFFFE !important;
-}
-
-.hero-header {
-    text-align: center;
-    padding: 2rem 1rem 1rem;
-}
-.hero-header h1 {
-    font-size: 2.4rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #6C5CE7, #00CEC9, #FD79A8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.3rem;
-}
-.hero-header p {
-    color: var(--text-secondary);
-    font-size: 1.05rem;
-    font-weight: 300;
-}
-
-.skill-card {
-    background: linear-gradient(135deg, rgba(26,26,46,0.9), rgba(34,34,58,0.9));
-    border: 1px solid rgba(108,92,231,0.2);
-    border-radius: 16px;
-    padding: 1.3rem;
-    margin-bottom: 0.8rem;
-    backdrop-filter: blur(10px);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.skill-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(108,92,231,0.15);
-}
-.skill-card h3 { color: #6C5CE7; font-size: 1.05rem; margin-bottom: 0.2rem; }
-.skill-card .definition { color: var(--text-secondary); font-size: 0.85rem; font-style: italic; }
-
-.result-card {
-    background: linear-gradient(135deg, rgba(26,26,46,0.95), rgba(22,33,62,0.95));
-    border: 1px solid rgba(0,206,201,0.3);
-    border-radius: 16px;
-    padding: 1.8rem;
-    margin: 1rem 0;
-}
-
-.metric-box {
-    background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,206,201,0.1));
-    border: 1px solid rgba(108,92,231,0.25);
-    border-radius: 14px;
-    padding: 1.2rem;
-    text-align: center;
-}
-.metric-box .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
-.metric-box .label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem; }
-
-.question-card {
-    background: linear-gradient(135deg, rgba(26,26,46,0.95), rgba(34,34,58,0.95));
-    border: 1px solid rgba(108,92,231,0.25);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 1.2rem;
-}
-.question-card h4 { color: #6C5CE7; margin-bottom: 0.5rem; }
-
-.score-badge {
+/* ── Buttons ── */
+.jd-btn {
     display: inline-block;
-    padding: 0.25rem 0.9rem;
-    border-radius: 20px;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 600;
-    font-size: 0.85rem;
-}
-.score-high { background: rgba(0,184,148,0.2); color: #00B894; border: 1px solid rgba(0,184,148,0.3); }
-.score-low  { background: rgba(255,107,107,0.2); color: #FF6B6B; border: 1px solid rgba(255,107,107,0.3); }
-
-.stButton > button {
-    background: linear-gradient(135deg, #6C5CE7, #5A4BD1) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 12px !important;
-    padding: 0.6rem 2rem !important;
-    font-weight: 600 !important;
-    font-size: 1rem !important;
-    transition: all 0.3s !important;
-    box-shadow: 0 4px 15px rgba(108,92,231,0.3) !important;
-}
-.stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(108,92,231,0.4) !important;
-}
-
-.gradient-divider {
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #6C5CE7, #00CEC9, transparent);
+    cursor: pointer;
+    transition: all 0.15s;
     border: none;
-    margin: 1.5rem 0;
+    text-align: center;
+}
+.jd-btn-primary { background: #3b5bdb; color: #fff; }
+.jd-btn-primary:hover { background: #364fc7; }
+.jd-btn-outline { background: #fff; color: #3b5bdb; border: 1.5px solid #3b5bdb; }
+.jd-btn-outline:hover { background: #eef2ff; }
+
+/* ── Skill chip ── */
+.jd-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 3px 3px 3px 0;
 }
 
-.pass-badge {
-    display: inline-block; padding: 0.4rem 1.5rem; border-radius: 24px;
-    font-weight: 700; font-size: 1.1rem;
+/* ── Question card ── */
+.q-card {
+    background: #fff;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 14px;
 }
-.pass-yes { background: rgba(0,184,148,0.2); color: #00B894; border: 2px solid #00B894; }
-.pass-no  { background: rgba(255,107,107,0.2); color: #FF6B6B; border: 2px solid #FF6B6B; }
+.q-num { font-size: 11px; font-weight: 600; color: #8a93a2; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.q-text { font-size: 15px; font-weight: 600; color: #1a1d23; line-height: 1.5; margin-bottom: 16px; }
+
+/* ── Cert row ── */
+.cert-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid #f3f4f6;
+}
+.cert-row:last-child { border-bottom: none; }
+.cert-logo {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: #f0f4ff; display: flex; align-items: center;
+    justify-content: center; font-size: 14px; font-weight: 700;
+    color: #3b5bdb; flex-shrink: 0;
+}
+.cert-name  { font-size: 14px; font-weight: 600; color: #1a1d23; }
+.cert-meta  { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+
+/* ── Job card ── */
+.job-card {
+    background: #fff; border: 1px solid #e8eaed;
+    border-radius: 10px; padding: 18px 20px;
+    margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+}
+.job-title   { font-size: 15px; font-weight: 700; color: #1a1d23; }
+.job-company { font-size: 13px; color: #3b5bdb; margin-top: 2px; font-weight: 500; }
+.job-meta    { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+.job-match-num { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+.job-match-label { font-size: 11px; color: #9ca3af; text-align: right; }
+
+/* ── Result banner ── */
+.result-banner {
+    border-radius: 10px; padding: 28px;
+    text-align: center; margin-bottom: 16px;
+}
+.result-score { font-size: 52px; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+.result-sub   { font-size: 14px; margin-top: 6px; }
+.result-label { font-size: 13px; margin-top: 4px; opacity: 0.7; }
+
+/* Streamlit overrides */
+div[data-testid="stVerticalBlock"] > div { padding-top: 0 !important; }
+.stButton > button {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    font-family: 'Inter', sans-serif !important;
+    transition: all 0.15s !important;
+}
+.stButton > button[kind="primary"] {
+    background: #3b5bdb !important;
+    border-color: #3b5bdb !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background: #364fc7 !important;
+}
+.stSelectbox label, .stTextInput label, .stCheckbox label,
+.stSlider label, .stRadio label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+}
+[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] .stRadio label span {
+    color: #4a5568 !important;
+}
+.stExpander { border: 1px solid #e8eaed !important; border-radius: 8px !important; }
+div[data-testid="stTabs"] button {
+    font-size: 13px !important; font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* Sidebar logo area */
+.jd-sidebar-logo {
+    padding: 20px 16px 12px 16px;
+    border-bottom: 1px solid #f0f1f3;
+    margin-bottom: 10px;
+}
+.jd-sidebar-logo-name {
+    font-size: 20px; font-weight: 800; color: #1a1d23; letter-spacing: -0.5px;
+}
+.jd-sidebar-logo-sub {
+    font-size: 11px; color: #9ca3af; margin-top: 1px; font-weight: 500;
+}
+.jd-sidebar-footer {
+    position: absolute; bottom: 24px; left: 16px;
+    font-size: 11px; color: #c1c7d0; line-height: 1.6;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .main .block-container {
+        padding: 16px 16px 32px 16px !important;
+    }
+    .jd-metrics {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .jd-page-title { font-size: 18px !important; }
+    .jd-metric-num { font-size: 22px !important; }
+}
+
+@media (max-width: 600px) {
+    .main .block-container {
+        padding: 10px 10px 24px 10px !important;
+    }
+    .jd-metrics {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    .jd-metric { padding: 12px 10px !important; }
+    .jd-metric-num { font-size: 20px !important; }
+    .jd-metric-label { font-size: 11px !important; }
+
+    .jd-page-title { font-size: 17px !important; }
+    .jd-card { padding: 14px 14px !important; }
+
+    /* Stack profile banner on mobile */
+    .jd-profile-body { padding: 0 14px 16px 14px !important; }
+    .jd-avatar { width: 52px !important; height: 52px !important; font-size: 18px !important; margin-top: -26px !important; }
+    .jd-profile-name { font-size: 16px !important; }
+
+    /* Job cards — stack match % below */
+    .job-card { flex-direction: column !important; gap: 10px !important; }
+    .job-match-num { font-size: 20px !important; }
+
+    /* Entry icons smaller */
+    .jd-entry-icon { width: 32px !important; height: 32px !important; font-size: 9px !important; }
+    .jd-entry-title { font-size: 13px !important; }
+    .jd-entry-desc { font-size: 12px !important; }
+
+    /* Result banner */
+    .result-score { font-size: 38px !important; }
+
+    /* Sidebar fixed narrow on mobile */
+    [data-testid="stSidebar"] {
+        min-width: 180px !important;
+        max-width: 180px !important;
+    }
+    [data-testid="stSidebar"] .stRadio label {
+        font-size: 12px !important;
+        padding: 7px 10px !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .jd-metrics {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .jd-metric-num { font-size: 18px !important; }
+    .jd-section-title { font-size: 10px !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
-
-# ── Constants ────────────────────────────────────────────────────────────────
-SOFT_SKILL_IDS = {
-    "2.B.1.b": "Coordination",
-    "2.B.1.e": "Instructing",
-    "2.B.1.d": "Negotiation",
-    "2.B.1.c": "Persuasion",
-    "2.B.1.f": "Service Orientation",
-    "2.B.1.a": "Social Perceptiveness",
-    "2.A.2.b": "Active Learning",
-    "2.A.1.b": "Active Listening",
-    "2.D.1.a": "Complex Problem Solving",
-    "2.A.2.a": "Critical Thinking",
-    "2.C.1.a": "Judgment and Decision Making",
-    "2.A.2.c": "Learning Strategies",
-    "2.A.2.d": "Monitoring",
-    "2.B.5.a": "Time Management",
-}
-
-SOCIAL_SKILLS = ["Coordination", "Instructing", "Negotiation", "Persuasion",
-                 "Service Orientation", "Social Perceptiveness"]
-THINKING_SKILLS = ["Active Learning", "Active Listening", "Complex Problem Solving",
-                   "Critical Thinking", "Judgment and Decision Making",
-                   "Learning Strategies", "Monitoring", "Time Management"]
-
-TARGET_ELEMENT_IDS = list(SOFT_SKILL_IDS.keys())
-
-
-# ── Load Excel ───────────────────────────────────────────────────────────────
-@st.cache_data
-def load_skills_data():
-    """Load and filter Skills.xlsx for the 14 target soft skills."""
-    df = pd.read_excel("Skills.xlsx")
-    df = df[df["Element ID"].isin(TARGET_ELEMENT_IDS)]
-    return df
-
-
-@st.cache_data
-def get_occupations(df):
-    """Return sorted list of unique occupation titles with their codes."""
-    occ = df[["O*NET-SOC Code", "Title"]].drop_duplicates()
-    occ = occ.sort_values("Title")
-    return occ
-
-
-def get_skill_data(df, occ_code, selected_skills):
-    """Get importance/level data for selected skills and occupation."""
-    skill_ids = [k for k, v in SOFT_SKILL_IDS.items() if v in selected_skills]
-    filtered = df[(df["O*NET-SOC Code"] == occ_code) & (df["Element ID"].isin(skill_ids))]
-
-    results = []
-    for skill_name in selected_skills:
-        skill_rows = filtered[filtered["Element Name"] == skill_name]
-
-        imp_row = skill_rows[skill_rows["Scale Name"] == "Importance"]
-        lvl_row = skill_rows[skill_rows["Scale Name"] == "Level"]
-
-        if imp_row.empty and lvl_row.empty:
-            continue
-
-        raw_imp = float(imp_row["Data Value"].values[0]) if not imp_row.empty else 0
-        raw_lvl = float(lvl_row["Data Value"].values[0]) if not lvl_row.empty else 0
-
-        # Check NOT RELEVANT
-        not_relevant = False
-        if not lvl_row.empty:
-            nr_val = lvl_row["Not Relevant"].values[0]
-            if isinstance(nr_val, str) and nr_val.strip().upper() == "Y":
-                not_relevant = True
-
-        # Check Recommend Suppress
-        suppress = False
-        for row_set in [imp_row, lvl_row]:
-            if not row_set.empty:
-                rs_val = row_set["Recommend Suppress"].values[0]
-                if isinstance(rs_val, str) and rs_val.strip().upper() in ("Y", "YES", "1"):
-                    suppress = True
-
-        std_imp = round(((raw_imp - 1) / 4) * 100, 1) if raw_imp > 0 else 0
-        std_lvl = round((raw_lvl / 7) * 100, 1) if raw_lvl > 0 else 0
-
-        category = "Social Skills" if skill_name in SOCIAL_SKILLS else "Thinking Skills"
-
-        results.append({
-            "skill": skill_name,
-            "category": category,
-            "raw_imp": round(raw_imp, 2),
-            "raw_lvl": round(raw_lvl, 2),
-            "std_imp": std_imp,
-            "std_lvl": std_lvl,
-            "not_relevant": not_relevant,
-            "suppress": suppress,
-        })
-
-    return results
-
-
-def calc_pass_threshold(skill_data):
-    """Determine pass threshold based on skill importance. Max threshold is 4/5."""
-    relevant = [s for s in skill_data if not s["not_relevant"]]
-    if not relevant:
-        return 3, "Default threshold (no relevant skill data)"
-
-    avg_imp = sum(s["std_imp"] for s in relevant) / len(relevant)
-    if avg_imp >= 50:
-        return 4, f"High threshold (4/5) — standardized importance is high ({avg_imp:.0f})"
-    elif avg_imp >= 25:
-        return 3, f"Standard threshold (3/5) — standardized importance is moderate ({avg_imp:.0f})"
-    else:
-        return 2, f"Low threshold (2/5) — standardized importance is low ({avg_imp:.0f})"
-
-
-def match_occupation_from_summary(summary: str, occupation_list: list[str]) -> str:
-    """Use LLM to match a user's self-description to the closest O*NET occupation."""
-    client = OpenAI(
-        base_url="https://api.tokenfactory.nebius.com/v1/",
-        api_key=os.environ.get("NEBIUS_API_KEY"),
-    )
-
-    # Send a subset of occupations to keep the prompt manageable
-    occ_text = "\n".join(f"- {o}" for o in occupation_list)
-
-    response = client.chat.completions.create(
-        model="Qwen/Qwen2.5-Coder-7B-fast",
-        messages=[
-            {"role": "system", "content": f"""You are an O*NET occupation classifier. Given a user's self-description, determine the SINGLE most matching occupation from the provided list.
-
-RESPOND WITH ONLY the exact occupation title from the list, nothing else. No explanation, no quotes, just the title exactly as it appears in the list.
-
-Available occupations:
-{occ_text}"""},
-            {"role": "user", "content": f"Match this person to an occupation:\n\n{summary}"},
-        ],
-    )
-
-    matched = response.choices[0].message.content.strip().strip('"').strip("'")
-
-    # Find closest match from the list
-    matched_lower = matched.lower()
-    for occ in occupation_list:
-        if occ.lower() == matched_lower:
-            return occ
-
-    # Partial match fallback
-    for occ in occupation_list:
-        if matched_lower in occ.lower() or occ.lower() in matched_lower:
-            return occ
-
-    # Return the AI's best guess even if not exact
-    return matched
-
-
-# ── AI Question Generation ──────────────────────────────────────────────────
-def generate_assessment(occupation_title: str, skill_data: list[dict]) -> list[dict]:
-    """Generate 5 scenario-based MCQ questions using the Nebius API."""
-    client = OpenAI(
-        base_url="https://api.tokenfactory.nebius.com/v1/",
-        api_key=os.environ.get("NEBIUS_API_KEY"),
-    )
-
-    # Build skill context for the prompt
-    relevant_skills = [s for s in skill_data if not s["not_relevant"]]
-    if not relevant_skills:
-        return []
-
-    skills_info = "\n".join([
-        f"- {s['skill']} (Category: {s['category']}) — "
-        f"Importance: {s['std_imp']}/100 ({'HIGH' if s['std_imp'] >= 50 else 'MEDIUM' if s['std_imp'] >= 25 else 'LOW'}), "
-        f"Level: {s['std_lvl']}/100 ({'Complex scenarios' if s['std_lvl'] >= 60 else 'Intermediate scenarios' if s['std_lvl'] >= 30 else 'Basic scenarios'})"
-        f"{' ⚠️ LOW CONFIDENCE RATING' if s['suppress'] else ''}"
-        for s in relevant_skills
-    ])
-
-    system_prompt = f"""You are an expert O*NET-based assessment designer.
-
-Create exactly 5 SCENARIO-BASED multiple-choice questions for the occupation: "{occupation_title}"
-
-SKILLS DATA (from official O*NET database):
-{skills_info}
-
-DIFFICULTY RULES (follow strictly):
-- Skills with Standardized Importance ≥ 50: HIGH priority — allocate more questions to these.
-- Skills with Standardized Importance 25–49: MEDIUM priority.
-- Skills with Standardized Importance < 25: LOW priority — fewer/easier questions.
-
-- Skills with Standardized Level ≥ 60: Generate COMPLEX, context-rich scenarios requiring higher-level reasoning.
-- Skills with Standardized Level 30–59: Generate INTERMEDIATE scenarios with some nuance.
-- Skills with Standardized Level < 30: Generate BASIC, straightforward scenarios.
-
-RULES:
-1. Exactly 5 questions total.
-2. Prioritize skills with higher Standardized Importance.
-3. {"ALL 5 questions MUST target the single skill provided above. Do NOT invent or use any other skills." if len(relevant_skills) == 1 else "Cover at least 2 different skills from the list above. Do NOT invent skills outside the provided list."}
-4. Each question MUST be a realistic workplace scenario specific to "{occupation_title}".
-5. Each question has exactly 4 options labeled A, B, C, D.
-6. Exactly one option is correct.
-7. Include which skill the question targets.
-8. Include a brief explanation of why the correct answer is best.
-
-CRITICAL: Your response must be ONLY a valid JSON array. Do not include any text before or after the JSON. Do not use markdown code fences. Start your response with [ and end with ].
-Each element must have this exact schema:
-{{
-  "question": "...",
-  "target_skill": "...",
-  "options": {{
-    "A": "...",
-    "B": "...",
-    "C": "...",
-    "D": "..."
-  }},
-  "correct": "A",
-  "explanation": "..."
-}}"""
-
-    MAX_RETRIES = 3
-    last_error = None
-
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = client.chat.completions.create(
-                model="Qwen/Qwen2.5-Coder-7B-fast",
-                temperature=0.7,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Generate the 5-question assessment for {occupation_title}. Respond with ONLY a JSON array, no other text."},
-                ],
-            )
-
-            raw = response.choices[0].message.content.strip()
-
-            # ── Strip markdown fences (```json ... ``` or ``` ... ```) ──
-            raw = re.sub(r'^```(?:json|JSON)?\s*\n?', '', raw)
-            raw = re.sub(r'\n?```\s*$', '', raw)
-            raw = raw.strip()
-
-            # ── Sanitize invalid control characters inside JSON string values ──
-            def _sanitize_json(s):
-                out = []
-                in_string = False
-                escape = False
-                for ch in s:
-                    if escape:
-                        out.append(ch)
-                        escape = False
-                        continue
-                    if ch == '\\' and in_string:
-                        out.append(ch)
-                        escape = True
-                        continue
-                    if ch == '"':
-                        in_string = not in_string
-                        out.append(ch)
-                        continue
-                    if in_string and ord(ch) < 0x20:
-                        if ch == '\n':
-                            out.append('\\n')
-                        elif ch == '\r':
-                            out.append('\\r')
-                        elif ch == '\t':
-                            out.append('\\t')
-                        else:
-                            out.append(' ')
-                        continue
-                    out.append(ch)
-                return ''.join(out)
-
-            raw = _sanitize_json(raw)
-
-            # ── Try to parse JSON, with multiple fallback strategies ──
-            result = None
-
-            # Strategy 1: direct parse
-            try:
-                result = json.loads(raw)
-            except json.JSONDecodeError:
-                pass
-
-            # Strategy 2: extract the outermost [...] and parse that
-            if result is None:
-                arr_match = re.search(r'\[.*\]', raw, re.DOTALL)
-                if arr_match:
-                    try:
-                        result = json.loads(arr_match.group(0))
-                    except json.JSONDecodeError:
-                        pass
-
-            # Strategy 3: raw_decode – grab the first valid JSON value
-            if result is None:
-                try:
-                    decoder = json.JSONDecoder()
-                    result, _ = decoder.raw_decode(raw)
-                except json.JSONDecodeError:
-                    raise ValueError("Could not parse AI response as JSON.")
-
-            # ── Normalise result into a list of question dicts ──
-            if isinstance(result, dict):
-                for key in ("questions", "data", "assessment", "quiz", "items"):
-                    if key in result and isinstance(result[key], list):
-                        result = result[key]
-                        break
-                if isinstance(result, dict):
-                    result = [result]
-
-            if not isinstance(result, list):
-                raise ValueError("AI response was not a JSON array.")
-
-            # ── Validate each question object ──
-            required_keys = {"question", "options", "correct"}
-            validated = []
-            for item in result:
-                if isinstance(item, dict) and required_keys.issubset(item.keys()):
-                    if isinstance(item.get("options"), dict):
-                        validated.append(item)
-
-            if not validated:
-                raise ValueError("AI returned no valid questions.")
-
-            return validated
-
-        except Exception as e:
-            last_error = e
-            continue
-
-    # All retries exhausted
-    raise ValueError(
-        f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"
-    )
-
-
-# ── CSV export ───────────────────────────────────────────────────────────────
-def generate_csv(skill_data, score, total, passed, threshold_reason, occupation):
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["O*NET Soft Skills Assessment Results"])
-    writer.writerow(["Occupation", occupation])
-    writer.writerow(["Score", f"{score}/{total}"])
-    writer.writerow(["Result", "PASS" if passed else "FAIL"])
-    writer.writerow(["Threshold Logic", threshold_reason])
-    writer.writerow([])
-    writer.writerow(["Skill", "Category", "Raw Importance", "Raw Level",
-                      "Std Importance", "Std Level", "Not Relevant", "Suppress"])
-    for s in skill_data:
-        writer.writerow([
-            s["skill"], s["category"], s["raw_imp"], s["raw_lvl"],
-            s["std_imp"], s["std_lvl"],
-            "Yes" if s["not_relevant"] else "No",
-            "Yes" if s["suppress"] else "No",
-        ])
-    return output.getvalue()
-
-
-# ── Session State ────────────────────────────────────────────────────────────
-if "stage" not in st.session_state:
-    st.session_state.stage = "input"
-if "skill_data" not in st.session_state:
-    st.session_state.skill_data = []
-if "questions" not in st.session_state:
-    st.session_state.questions = []
-if "occ_code" not in st.session_state:
-    st.session_state.occ_code = ""
-if "occ_title" not in st.session_state:
-    st.session_state.occ_title = ""
-if "user_answers" not in st.session_state:
-    st.session_state.user_answers = {}
-
-
-# ── Load Data ────────────────────────────────────────────────────────────────
-df = load_skills_data()
-occupations = get_occupations(df)
-occ_titles = occupations["Title"].tolist()
-occ_map = dict(zip(occupations["Title"], occupations["O*NET-SOC Code"]))
-
-# Get available skills per occupation (will update dynamically)
-all_skill_names = list(SOFT_SKILL_IDS.values())
-
-
-# ── SIDEBAR ──────────────────────────────────────────────────────────────────
+# ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🎯 Assessment Setup")
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # Step 1: Choose how to identify occupation
-    input_mode = st.radio(
-        "🏢 How would you like to identify your occupation?",
-        options=["Select from list", "Write a summary about myself"],
-        index=0,
-        help="Choose to pick an occupation directly or describe yourself and let AI match you.",
-    )
-
-    selected_occ = None
-    occ_code = None
-
-    if input_mode == "Select from list":
-        selected_occ = st.selectbox(
-            "🔍 Search Occupation",
-            options=[""] + occ_titles,
-            index=0,
-            help="Search and select your target O*NET occupation",
-            placeholder="Type to search occupations...",
-        )
-        if selected_occ:
-            occ_code = occ_map[selected_occ]
-            st.caption(f"📋 Code: `{occ_code}`")
-
-    else:  # Write a summary
-        user_summary = st.text_area(
-            "📝 Describe yourself",
-            placeholder="e.g. I work in data analysis, building dashboards and reports. I manage a small team and often present insights to executives...",
-            height=120,
-            help="Describe your role, daily tasks, and responsibilities. The AI will match you to the closest O*NET occupation.",
-        )
-
-        if user_summary and len(user_summary.strip()) > 10:
-            if st.button("🤖 Find My Occupation", use_container_width=True):
-                with st.spinner("🔍 AI is matching your profile to O*NET occupations..."):
-                    try:
-                        matched_title = match_occupation_from_summary(user_summary, occ_titles)
-                        st.session_state._matched_occ = matched_title
-                    except Exception as e:
-                        st.error(f"❌ Matching failed: {e}")
-
-        # Show matched result
-        if hasattr(st.session_state, "_matched_occ") and st.session_state._matched_occ:
-            matched = st.session_state._matched_occ
-            st.success(f"✅ Best match: **{matched}**")
-            if matched in occ_map:
-                selected_occ = matched
-                occ_code = occ_map[matched]
-                st.caption(f"📋 Code: `{occ_code}`")
-            else:
-                st.warning(f"⚠️ '{matched}' not found in the list. Please select manually.")
-                selected_occ = st.selectbox(
-                    "🔍 Select the correct occupation",
-                    options=[""] + occ_titles,
-                    index=0,
-                    placeholder="Type to search...",
-                    key="fallback_occ",
-                )
-                if selected_occ:
-                    occ_code = occ_map[selected_occ]
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # Step 2: Select ONE skill
-    st.markdown("### 🎯 Select Skill to Assess")
-
-    selected_skill = st.selectbox(
-        "Choose one of the 14 O*NET Soft Skills",
-        options=[""] + all_skill_names,
-        index=0,
-        help="Select a single skill to assess. The app will generate 5 questions for this skill.",
-        placeholder="Pick a skill...",
-    )
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    if st.button("🔄 Reset", use_container_width=True):
-        st.session_state.stage = "input"
-        st.session_state.skill_data = []
-        st.session_state.questions = []
-        st.session_state.user_answers = {}
-        if hasattr(st.session_state, "_matched_occ"):
-            del st.session_state._matched_occ
-        st.rerun()
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    if selected_occ and selected_skill:
-        if st.button("🚀 Generate Assessment", use_container_width=True):
-            st.session_state.occ_code = occ_code
-            st.session_state.occ_title = selected_occ
-            st.session_state.stage = "loading"
-            st.session_state._selected_skills = [selected_skill]
-            st.rerun()
-    elif not selected_occ:
-        st.info("⬆️ Select or match an occupation to begin.")
-    elif not selected_skill:
-        st.info("⬆️ Select a skill to assess.")
-
-    st.markdown("---")
-    st.markdown(
-        "<p style='color:#FFFFFE;font-size:0.78rem;text-align:center;'>"
-        "Powered by O*NET Standards<br>Data from Skills.xlsx · AI via Nebius</p>",
-        unsafe_allow_html=True,
-    )
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  MAIN CONTENT
-# ══════════════════════════════════════════════════════════════════════════════
-
-# ── INPUT STAGE ──────────────────────────────────────────────────────────────
-if st.session_state.stage == "input":
     st.markdown("""
-    <div class="hero-header">
-        <h1>🎯 O*NET Soft Skills Assessment</h1>
-        <p>Data-driven assessment powered by official O*NET occupation data</p>
+    <div class="jd-sidebar-logo">
+        <div class="jd-sidebar-logo-name">Jadeer</div>
+        <div class="jd-sidebar-logo-sub">Career Intelligence Platform</div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+    page = st.radio(
+        "nav",
+        ["Home", "Profile", "CV Builder", "Skills Assessment", "Certificates", "Recommendations"],
+        label_visibility="hidden",
+    )
 
-    st.markdown("### How It Works")
-    cols = st.columns(4)
-    steps = [
-        ("1️⃣", "Choose Occupation", "Select from list or describe yourself for AI matching"),
-        ("2️⃣", "Pick a Skill", "Select one of the 14 soft skills to assess"),
-        ("3️⃣", "Take the Quiz", "Answer 5 scenario-based questions tailored to your role"),
-        ("4️⃣", "Get Results", "See your score, pass/fail, skill breakdown & export CSV"),
-    ]
-    for col, (icon, title, desc) in zip(cols, steps):
-        with col:
+    st.markdown("""
+    <div class="jd-sidebar-footer">
+        Powered by O*NET &amp; Nebius AI<br>
+        v1.0.0 &nbsp;·&nbsp; Demo Mode
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ─── Demo data ────────────────────────────────────────────────────────────────
+SKILLS_DATA = [
+    {"skill": "Critical Thinking",           "category": "Thinking", "priority": "HIGH",   "importance": 82, "level": 75},
+    {"skill": "Active Learning",              "category": "Thinking", "priority": "HIGH",   "importance": 76, "level": 68},
+    {"skill": "Complex Problem Solving",      "category": "Thinking", "priority": "HIGH",   "importance": 73, "level": 70},
+    {"skill": "Judgment & Decision Making",   "category": "Thinking", "priority": "MEDIUM", "importance": 65, "level": 60},
+    {"skill": "Monitoring",                   "category": "Thinking", "priority": "MEDIUM", "importance": 60, "level": 55},
+    {"skill": "Time Management",              "category": "Thinking", "priority": "MEDIUM", "importance": 58, "level": 50},
+    {"skill": "Learning Strategies",          "category": "Thinking", "priority": "MEDIUM", "importance": 54, "level": 48},
+    {"skill": "Active Listening",             "category": "Thinking", "priority": "MEDIUM", "importance": 52, "level": 45},
+    {"skill": "Coordination",                 "category": "Social",   "priority": "MEDIUM", "importance": 50, "level": 46},
+    {"skill": "Social Perceptiveness",        "category": "Social",   "priority": "LOW",    "importance": 38, "level": 35},
+    {"skill": "Persuasion",                   "category": "Social",   "priority": "LOW",    "importance": 32, "level": 30},
+    {"skill": "Negotiation",                  "category": "Social",   "priority": "LOW",    "importance": 28, "level": 25},
+    {"skill": "Instructing",                  "category": "Social",   "priority": "LOW",    "importance": 24, "level": 22},
+    {"skill": "Service Orientation",          "category": "Social",   "priority": "LOW",    "importance": 20, "level": 18},
+]
+CERTS = [
+    {"abbr": "AWS", "name": "AWS Certified Developer",  "issuer": "Amazon Web Services", "status": "Verified",  "date": "Jan 2024"},
+    {"abbr": "PY",  "name": "Python Professional",      "issuer": "Coursera",            "status": "Verified",  "date": "Mar 2023"},
+    {"abbr": "DK",  "name": "Docker Fundamentals",      "issuer": "edX",                 "status": "Pending",   "date": "Nov 2023"},
+    {"abbr": "CEH", "name": "Certified Ethical Hacker", "issuer": "EC-Council",          "status": "Verified",  "date": "Jul 2023"},
+]
+JOBS = [
+    {"title": "Senior Software Engineer",   "company": "Google",  "location": "Remote",  "match": 91, "skills": ["Python", "System Design", "ML"]},
+    {"title": "AI/ML Engineer",             "company": "STC",     "location": "Riyadh",  "match": 87, "skills": ["ML", "FastAPI", "Docker"]},
+    {"title": "Backend Developer",          "company": "Noon",    "location": "Riyadh",  "match": 84, "skills": ["Python", "APIs", "Cloud"]},
+    {"title": "Full-Stack Developer",       "company": "Careem",  "location": "Riyadh",  "match": 79, "skills": ["Python", "React", "Supabase"]},
+]
+EXPERIENCES = [
+    {"title": "Software Engineer",  "company": "Tech Startup, Riyadh",  "period": "2023 – Present",
+     "desc": "Built microservices with FastAPI and Docker. Led AI integration using Nebius LLM and Supabase."},
+    {"title": "Junior Developer",   "company": "Digital Agency",         "period": "2022 – 2023",
+     "desc": "Developed REST APIs and maintained PostgreSQL databases. Collaborated in agile sprints."},
+]
+QUESTIONS = [
+    {"q": "You notice a critical security vulnerability during a deployment not in your task list. Your team is under deadline pressure. What do you do?",
+     "skill": "Judgment & Decision Making",
+     "opts": {"A": "Ignore it and stay on schedule.", "B": "Document it, notify your lead, and assess risk before proceeding.", "C": "Fix it silently to save time.", "D": "Deploy and fix it in the next sprint."}, "ans": "B",
+     "exp": "Sound judgment means surfacing risk and making informed decisions with your team, not ignoring or unilaterally resolving it."},
+    {"q": "A new framework your team adopted has unexpected performance issues. You have 2 days to present a solution.",
+     "skill": "Complex Problem Solving",
+     "opts": {"A": "Revert to the old framework.", "B": "Profile the app, identify bottlenecks, test fixes, and present findings.", "C": "Delegate it to another team.", "D": "Present the problem without solutions."}, "ans": "B",
+     "exp": "Systematic investigation, evidence-based fixes, and clear communication is the hallmark of effective problem solving."},
+    {"q": "During a code review, a colleague proposes a design pattern you are unfamiliar with. What is your best response?",
+     "skill": "Active Learning",
+     "opts": {"A": "Reject it — stick with what you know.", "B": "Approve it without understanding.", "C": "Ask the colleague to explain it, research independently, then evaluate its fit.", "D": "Escalate to a manager."}, "ans": "C",
+     "exp": "Active learners seek understanding before accepting or rejecting — combining peer knowledge with independent research."},
+    {"q": "Your project estimate was 2 weeks but work is taking 3. What should you do?",
+     "skill": "Time Management",
+     "opts": {"A": "Work overtime without telling anyone.", "B": "Inform stakeholders early, reassess scope, reprioritize, and provide a revised timeline.", "C": "Submit partial work as complete.", "D": "Blame external dependencies."}, "ans": "B",
+     "exp": "Effective time management includes proactive communication and realistic re-estimation, not silence or deflection."},
+    {"q": "A client reports a production bug affecting 10% of users. Your first action is to:",
+     "skill": "Critical Thinking",
+     "opts": {"A": "Try fixes randomly until something works.", "B": "Collect logs, reproduce the issue, form a hypothesis, test, and apply a targeted fix.", "C": "Roll back all recent changes.", "D": "Tell the client it is their network issue."}, "ans": "B",
+     "exp": "Critical thinking means using evidence to systematically diagnose problems rather than guessing."},
+]
+
+# ─── Session state ─────────────────────────────────────────────────────────────
+for k, v in {"started": False, "answers": {}, "submitted": False, "matched": False,
+             "cv_done": False, "sel_skill": "Critical Thinking"}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+def bar(name, val, color="#3b5bdb"):
+    st.markdown(f"""
+    <div class="jd-bar-wrap">
+      <div class="jd-bar-header"><span>{name}</span><span style="color:#9ca3af;font-size:12px;">{val}%</span></div>
+      <div class="jd-bar-track"><div class="jd-bar-fill" style="width:{val}%;background:{color};"></div></div>
+    </div>""", unsafe_allow_html=True)
+
+def badge(text, kind="blue"):
+    return f'<span class="jd-badge jd-badge-{kind}">{text}</span>'
+
+def priority_color(p):
+    return "#3b5bdb" if p == "HIGH" else "#e67700" if p == "MEDIUM" else "#adb5bd"
+
+
+# ══════════════════════════════════════════════════════════════════
+# HOME
+# ══════════════════════════════════════════════════════════════════
+if page == "Home":
+    # Hero banner
+    st.markdown("""
+    <div style="background:linear-gradient(120deg,#3b5bdb,#1971c2);border-radius:12px;
+                padding:32px 36px;margin-bottom:20px;color:#fff;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;opacity:0.7;
+                    text-transform:uppercase;margin-bottom:8px;">Good evening</div>
+        <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;">
+            Welcome back, Layan
+        </div>
+        <div style="font-size:14px;opacity:0.8;">
+            Your career intelligence dashboard &mdash; powered by O*NET &amp; Nebius AI.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Metrics
+    st.markdown("""
+    <div class="jd-metrics">
+        <div class="jd-metric">
+            <div class="jd-metric-num">312</div>
+            <div class="jd-metric-label">Connections</div>
+        </div>
+        <div class="jd-metric">
+            <div class="jd-metric-num">4</div>
+            <div class="jd-metric-label">Certificates</div>
+        </div>
+        <div class="jd-metric">
+            <div class="jd-metric-num">14</div>
+            <div class="jd-metric-label">Skills Assessed</div>
+        </div>
+        <div class="jd-metric">
+            <div class="jd-metric-num">91%</div>
+            <div class="jd-metric-label">Top Job Match</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([3, 2], gap="medium")
+
+    with col1:
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Platform Overview</div>', unsafe_allow_html=True)
+
+        features = [
+            ("LA", "Profile",             "LinkedIn-style professional profile with AI-enhanced bio."),
+            ("CV", "CV Builder",          "Auto-generate a verified PDF CV from your Jadeer profile."),
+            ("SK", "Skills Assessment",   "O*NET-based soft skills quiz with scenario-driven questions."),
+            ("CR", "Certificates",        "Verify credentials from EC-Council, Coursera, edX & more."),
+            ("JB", "Recommendations",    "AI job matching based on your occupation and skill scores."),
+        ]
+        for abbr, title, desc in features:
             st.markdown(f"""
-            <div class="skill-card" style="text-align:center;">
-                <div style="font-size:2rem;">{icon}</div>
-                <h3>{title}</h3>
-                <div class="definition">{desc}</div>
+            <div class="jd-entry">
+                <div class="jd-entry-icon">{abbr}</div>
+                <div>
+                    <div class="jd-entry-title">{title}</div>
+                    <div class="jd-entry-sub">{desc}</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Occupation Match</div>', unsafe_allow_html=True)
 
-    # Show the 14 skills
-    st.markdown("### 📚 The 14 O*NET Soft Skills")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("#### 🤝 Social Skills")
-        for s in SOCIAL_SKILLS:
-            st.markdown(f"- **{s}**")
-    with c2:
-        st.markdown("#### 🧠 Thinking Skills")
-        for s in THINKING_SKILLS:
-            st.markdown(f"- **{s}**")
-
-    st.markdown("""
-    <div style="text-align:center; color:#FFFFFE; padding:2rem 1rem;">
-        <p>👈 Use the sidebar to select an occupation and skills, then click <b>Generate Assessment</b></p>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-# ── LOADING STAGE ────────────────────────────────────────────────────────────
-elif st.session_state.stage == "loading":
-    occ_code = st.session_state.occ_code
-    occ_title = st.session_state.occ_title
-    selected_skills = st.session_state._selected_skills
-
-    st.markdown(f"""
-    <div class="hero-header">
-        <h1>⏳ Generating Assessment</h1>
-        <p>Occupation: <b>{occ_title}</b> ({occ_code})</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Step 1: Read skill data from Excel
-    with st.spinner("📊 Reading O*NET data from Skills.xlsx..."):
-        skill_data = get_skill_data(df, occ_code, selected_skills)
-
-    # Filter out NOT RELEVANT skills
-    relevant = [s for s in skill_data if not s["not_relevant"]]
-    not_relevant = [s for s in skill_data if s["not_relevant"]]
-
-    if not_relevant:
-        st.warning(f"⚠️ Skipping {len(not_relevant)} skill(s) marked as NOT RELEVANT: "
-                   + ", ".join(s["skill"] for s in not_relevant))
-
-    if not relevant:
-        st.error("❌ No relevant skills found for this occupation. Please choose different skills or occupation.")
-        st.session_state.stage = "input"
-        st.stop()
-
-    # Show skill data summary
-    st.markdown("### 📋 Skill Data from O*NET")
-    header = "| Skill | Category | Raw Imp | Raw Lvl | Std Imp | Std Lvl | Priority | Difficulty |"
-    sep = "|-------|----------|---------|---------|---------|---------|----------|------------|"
-    rows = [header, sep]
-    for s in relevant:
-        priority = "🔴 HIGH" if s["std_imp"] >= 50 else ("🟡 MED" if s["std_imp"] >= 25 else "🟢 LOW")
-        difficulty = "Complex" if s["std_lvl"] >= 60 else ("Intermediate" if s["std_lvl"] >= 30 else "Basic")
-        suppress_flag = " ⚠️" if s["suppress"] else ""
-        rows.append(f"| {s['skill']}{suppress_flag} | {s['category']} | {s['raw_imp']} | {s['raw_lvl']} | "
-                    f"{s['std_imp']} | {s['std_lvl']} | {priority} | {difficulty} |")
-    st.markdown("\n".join(rows))
-
-    # Step 2: Generate questions via AI
-    with st.spinner("🤖 AI is generating scenario-based questions..."):
-        try:
-            questions = generate_assessment(occ_title, relevant)
-        except Exception as e:
-            st.error(f"❌ Failed to generate questions: {e}")
-            st.session_state.stage = "input"
-            st.stop()
-
-    st.session_state.skill_data = skill_data
-    st.session_state.questions = questions
-    st.session_state.user_answers = {}
-    st.session_state.stage = "quiz"
-    st.rerun()
-
-
-# ── QUIZ STAGE ───────────────────────────────────────────────────────────────
-elif st.session_state.stage == "quiz":
-    occ_title = st.session_state.occ_title
-    occ_code = st.session_state.occ_code
-    questions = st.session_state.questions
-    skill_data = st.session_state.skill_data
-
-    st.markdown(f"""
-    <div class="hero-header">
-        <h1>📝 Assessment Quiz</h1>
-        <p>{occ_title} ({occ_code}) · {len(questions)} Questions</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    with st.form("quiz_form"):
-        answers = {}
-        for i, q in enumerate(questions):
-            target = q.get("target_skill", "Unknown")
-
+        if not st.session_state.matched:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Match My Occupation", use_container_width=True, type="primary"):
+                with st.spinner("Analyzing profile with AI..."):
+                    time.sleep(2)
+                st.session_state.matched = True
+                st.rerun()
+            st.markdown("<br>", unsafe_allow_html=True)
+        else:
             st.markdown(f"""
-            <div class="question-card">
-                <h4>Question {i + 1} of {len(questions)}</h4>
-                <div style="color:#FFFFFE; font-size:0.8rem; margin-bottom:0.5rem;">
-                    🎯 Skill: {target}
+            <div style="background:#eef2ff;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+                <div style="font-size:15px;font-weight:700;color:#3b5bdb;">Software Developers</div>
+                <div style="font-size:11px;color:#748ffc;margin-top:3px;font-weight:500;">O*NET &middot; 15-1252.00</div>
+            </div>
+            <div style="font-size:12px;font-weight:600;color:#8a93a2;text-transform:uppercase;
+                        letter-spacing:0.5px;margin-bottom:10px;">Top skill importance</div>
+            """, unsafe_allow_html=True)
+            for s in SKILLS_DATA[:5]:
+                bar(s["skill"], s["importance"])
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════
+# PROFILE
+# ══════════════════════════════════════════════════════════════════
+elif page == "Profile":
+    # Header card
+    st.markdown("""
+    <div class="jd-card-flat">
+        <div class="jd-profile-banner"></div>
+        <div class="jd-profile-body">
+            <div class="jd-avatar">LA</div>
+            <div class="jd-profile-name">Layan Alghamdi</div>
+            <div class="jd-profile-headline">Software Engineer &middot; AI Enthusiast</div>
+            <div class="jd-profile-meta">Riyadh, Saudi Arabia &nbsp;&middot;&nbsp; 312 connections</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([2, 1], gap="medium")
+
+    with col1:
+        # About
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">About</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="font-size:14px;color:#374151;line-height:1.65;">
+            Passionate software engineer building scalable AI-powered systems.
+            Currently developing Jadeer — a career intelligence platform that combines
+            O*NET occupational data with large language models to help professionals
+            grow smarter and faster.
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Experience
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Experience</div>', unsafe_allow_html=True)
+        for i, exp in enumerate(EXPERIENCES):
+            st.markdown(f"""
+            <div class="jd-entry">
+                <div class="jd-entry-icon" style="font-size:11px;">EXP</div>
+                <div>
+                    <div class="jd-entry-title">{exp["title"]}</div>
+                    <div class="jd-entry-sub">{exp["company"]}</div>
+                    <div class="jd-entry-date">{exp["period"]}</div>
+                    <div class="jd-entry-desc">{exp["desc"]}</div>
+                </div>
+            </div>
+            {"<hr class='jd-divider'>" if i < len(EXPERIENCES)-1 else ""}
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Education
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Education</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="jd-entry">
+            <div class="jd-entry-icon" style="font-size:10px;">KAU</div>
+            <div>
+                <div class="jd-entry-title">B.Sc. Computer Science</div>
+                <div class="jd-entry-sub">King Abdulaziz University</div>
+                <div class="jd-entry-date">2019 – 2023</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        # Skills
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Top Skills</div>', unsafe_allow_html=True)
+        for sk in ["Python", "FastAPI", "Machine Learning", "Docker", "Supabase", "PostgreSQL"]:
+            st.markdown(f'<span class="jd-chip">{sk}</span>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Certs summary
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Certificates</div>', unsafe_allow_html=True)
+        for c in CERTS:
+            kind = "green" if c["status"] == "Verified" else "amber"
+            st.markdown(f"""
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:11px;">
+                <div class="cert-logo">{c["abbr"]}</div>
+                <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:600;color:#1a1d23;">{c["name"]}</div>
+                    <div style="font-size:11px;color:#9ca3af;">{c["issuer"]}</div>
+                </div>
+                {badge(c["status"], kind)}
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════
+# CV BUILDER
+# ══════════════════════════════════════════════════════════════════
+elif page == "CV Builder":
+    st.markdown('<div class="jd-page-title">CV Builder</div>', unsafe_allow_html=True)
+    st.markdown('<div class="jd-page-sub">Generate a professional PDF from your Jadeer profile — with verified skill badges</div>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 2], gap="medium")
+
+    with col1:
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Sections</div>', unsafe_allow_html=True)
+        inc_exp  = st.checkbox("Experience",          value=True)
+        inc_edu  = st.checkbox("Education",           value=True)
+        inc_cert = st.checkbox("Certificates",        value=True)
+        inc_sk   = st.checkbox("Skills",              value=True)
+        inc_sc   = st.checkbox("Skill Scores",        value=True)
+        inc_bd   = st.checkbox("Verified Badges",     value=True)
+        st.markdown('<hr class="jd-divider">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Options</div>', unsafe_allow_html=True)
+        threshold = st.slider("Badge Score Threshold (%)", 50, 90, 70)
+        cv_name = st.text_input("CV Label", placeholder="e.g. Google Application")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Generate CV", use_container_width=True, type="primary"):
+            with st.spinner("Building your CV..."):
+                time.sleep(2)
+            st.session_state.cv_done = True
+            st.success("CV generated successfully.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="jd-card" style="min-height:520px;">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Preview</div>', unsafe_allow_html=True)
+
+        if st.session_state.cv_done:
+            st.markdown("""
+            <div style="border:1px solid #e8eaed;border-radius:8px;padding:28px;background:#fafafa;">
+                <div style="border-bottom:2px solid #3b5bdb;padding-bottom:14px;margin-bottom:18px;">
+                    <div style="font-size:20px;font-weight:800;color:#1a1d23;letter-spacing:-0.5px;">Layan Alghamdi</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:3px;">Software Engineer &nbsp;|&nbsp; Riyadh, SA &nbsp;|&nbsp; layan@example.com</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+                                color:#3b5bdb;margin-bottom:5px;">Profile</div>
+                    <div style="font-size:13px;color:#374151;line-height:1.55;">
+                        Passionate software engineer building scalable AI-powered systems...
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+                                color:#3b5bdb;margin-bottom:6px;">Experience</div>
+                    <div style="font-size:13px;font-weight:600;color:#1a1d23;">Software Engineer — Tech Startup, Riyadh</div>
+                    <div style="font-size:11px;color:#9ca3af;">2023 – Present</div>
+                    <div style="font-size:12px;color:#4b5563;margin-top:3px;">Built microservices with FastAPI and Docker...</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+                                color:#3b5bdb;margin-bottom:8px;">Verified Soft Skills</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+                        <span style="background:#ebfbee;color:#2f9e44;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">+ Critical Thinking 82%</span>
+                        <span style="background:#ebfbee;color:#2f9e44;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">+ Active Learning 76%</span>
+                        <span style="background:#ebfbee;color:#2f9e44;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">+ Problem Solving 73%</span>
+                        <span style="background:#f3f4f6;color:#6b7280;padding:3px 8px;border-radius:4px;font-size:11px;">Time Management 58%</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+                                color:#3b5bdb;margin-bottom:5px;">Certificates</div>
+                    <div style="font-size:12px;color:#374151;">AWS Certified Developer &nbsp;·&nbsp; Python Professional &nbsp;·&nbsp; CEH</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown(f"**{q['question']}**")
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.download_button(
+                "Download PDF",
+                data=b"[Connect backend for real PDF output]",
+                file_name="Jadeer_CV_Layan.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        else:
+            st.markdown("""
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                        height:400px;color:#c1c7d0;text-align:center;">
+                <div style="font-size:36px;font-weight:200;color:#d1d5db;margin-bottom:12px;">CV</div>
+                <div style="font-size:14px;font-weight:600;color:#6b7280;">Preview will appear here</div>
+                <div style="font-size:13px;color:#9ca3af;margin-top:4px;">Configure options and click Generate</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            options_list = [f"{k}. {v}" for k, v in q["options"].items()]
-            choice = st.radio(
-                f"Your answer for Q{i + 1}",
-                options=options_list,
-                index=None,
-                key=f"q_{i}",
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════
+# SKILLS ASSESSMENT
+# ══════════════════════════════════════════════════════════════════
+elif page == "Skills Assessment":
+    if not st.session_state.started:
+        st.markdown('<div class="jd-page-title">Skills Assessment</div>', unsafe_allow_html=True)
+        st.markdown('<div class="jd-page-sub">Scenario-based evaluation across 14 O*NET soft skills for your occupation</div>', unsafe_allow_html=True)
+
+        col1, col2 = st.columns([1, 2], gap="medium")
+
+        with col1:
+            st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+            st.markdown('<div class="jd-section-title">Select Skill</div>', unsafe_allow_html=True)
+
+            names = [s["skill"] for s in SKILLS_DATA]
+            sel = st.selectbox("Skill", names, label_visibility="collapsed")
+            st.session_state.sel_skill = sel
+            info = next(s for s in SKILLS_DATA if s["skill"] == sel)
+            p = info["priority"]
+            pk = "blue" if p == "HIGH" else "amber" if p == "MEDIUM" else "gray"
+
+            st.markdown(f"""
+            <div style="background:#f7f8fa;border-radius:8px;padding:14px 16px;margin-top:12px;margin-bottom:14px;">
+                <div style="font-size:13px;font-weight:600;color:#1a1d23;margin-bottom:4px;">{sel}</div>
+                <div style="font-size:12px;color:#8a93a2;margin-bottom:8px;">{info["category"]} Skills</div>
+                {badge(p + " priority", pk)}
+                <div style="margin-top:12px;">
+            """, unsafe_allow_html=True)
+            bar("Importance for Software Dev", info["importance"])
+            bar("Required Level", info["level"], "#748ffc")
+            st.markdown("</div></div>", unsafe_allow_html=True)
+
+            if st.button("Start Assessment", use_container_width=True, type="primary"):
+                st.session_state.started   = True
+                st.session_state.answers   = {}
+                st.session_state.submitted = False
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col2:
+            st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+            st.markdown('<div class="jd-section-title">All 14 O*NET Soft Skills — Software Developer</div>', unsafe_allow_html=True)
+
+            tab1, tab2 = st.tabs(["Thinking Skills", "Social Skills"])
+            with tab1:
+                for s in [x for x in SKILLS_DATA if x["category"] == "Thinking"]:
+                    bar(s["skill"], s["importance"], priority_color(s["priority"]))
+            with tab2:
+                for s in [x for x in SKILLS_DATA if x["category"] == "Social"]:
+                    bar(s["skill"], s["importance"], priority_color(s["priority"]))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    elif not st.session_state.submitted:
+        st.markdown(f'<div class="jd-page-title">{st.session_state.sel_skill}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="jd-page-sub">Software Developers &nbsp;·&nbsp; 5 scenario-based questions &nbsp;·&nbsp; Select the best answer</div>', unsafe_allow_html=True)
+
+        for i, q in enumerate(QUESTIONS):
+            st.markdown(f"""
+            <div class="q-card">
+                <div class="q-num">Question {i+1} of {len(QUESTIONS)} &nbsp;&middot;&nbsp; {q["skill"]}</div>
+                <div class="q-text">{q["q"]}</div>
+            """, unsafe_allow_html=True)
+            ans = st.radio(
+                f"q{i}",
+                list(q["opts"].keys()),
+                format_func=lambda k, q=q: f"{k}.  {q['opts'][k]}",
+                key=f"qr_{i}",
                 label_visibility="collapsed",
             )
-            answers[i] = choice
+            st.session_state.answers[str(i)] = ans
+            st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
+        colA, colB, colC = st.columns([2, 2, 1])
+        with colA:
+            if st.button("Submit Assessment", use_container_width=True, type="primary"):
+                st.session_state.submitted = True
+                st.rerun()
+        with colC:
+            if st.button("Cancel", use_container_width=True):
+                st.session_state.started = False
+                st.rerun()
 
-        submitted = st.form_submit_button("📊 Submit & See Results", use_container_width=True)
+    else:
+        # Results
+        score = sum(1 for i, q in enumerate(QUESTIONS)
+                    if st.session_state.answers.get(str(i), "").upper() == q["ans"])
+        total = len(QUESTIONS)
+        pct   = round(score / total * 100)
+        passed = score >= 4
 
-    if submitted:
-        # Check all answered
-        unanswered = [i + 1 for i, a in answers.items() if a is None]
-        if unanswered:
-            st.error(f"⚠️ Please answer all questions. Missing: Q{', Q'.join(map(str, unanswered))}")
-            st.stop()
-
-        # Extract letter answers
-        user_answers = {}
-        for i, choice in answers.items():
-            letter = choice.split(".")[0].strip() if choice else ""
-            user_answers[i] = letter
-
-        st.session_state.user_answers = user_answers
-        st.session_state.stage = "results"
-        st.rerun()
-
-
-# ── RESULTS STAGE ────────────────────────────────────────────────────────────
-elif st.session_state.stage == "results":
-    occ_title = st.session_state.occ_title
-    occ_code = st.session_state.occ_code
-    questions = st.session_state.questions
-    skill_data = st.session_state.skill_data
-    user_answers = st.session_state.user_answers
-
-    # Calculate score
-    score = 0
-    for i, q in enumerate(questions):
-        if user_answers.get(i) == q["correct"]:
-            score += 1
-    total = len(questions)
-
-    # Pass/Fail
-    pass_threshold, threshold_reason = calc_pass_threshold(skill_data)
-    passed = score >= pass_threshold
-
-    st.markdown(f"""
-    <div class="hero-header">
-        <h1>📊 Assessment Results</h1>
-        <p>{occ_title} ({occ_code})</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # Summary metrics
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="value">{score}/{total}</div>
-            <div class="label">Score</div>
-        </div>""", unsafe_allow_html=True)
-    with m2:
-        pct = round((score / total) * 100) if total > 0 else 0
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="value">{pct}%</div>
-            <div class="label">Accuracy</div>
-        </div>""", unsafe_allow_html=True)
-    with m3:
-        badge_cls = "pass-yes" if passed else "pass-no"
-        badge_text = "✅ PASS" if passed else "❌ FAIL"
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="pass-badge {badge_cls}">{badge_text}</div>
-            <div class="label" style="margin-top:0.5rem;">Threshold: {pass_threshold}/{total}</div>
-        </div>""", unsafe_allow_html=True)
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # ── Section 1: Skill Data Summary ────────────────────────────────────────
-    st.markdown("### 📋 1. Occupation & Skills Summary")
-    st.markdown(f"""
-    <div class="result-card">
-        <p><b>Occupation:</b> {occ_title} (<code>{occ_code}</code>)</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    relevant = [s for s in skill_data if not s["not_relevant"]]
-    header = "| Skill | Category | Raw Imp | Raw Lvl | Std Imp | Std Lvl |"
-    sep = "|-------|----------|---------|---------|---------|---------|"
-    rows = [header, sep]
-    for s in relevant:
-        flag = " ⚠️" if s["suppress"] else ""
-        rows.append(f"| {s['skill']}{flag} | {s['category']} | {s['raw_imp']} | {s['raw_lvl']} | "
-                    f"{s['std_imp']} | {s['std_lvl']} |")
-    st.markdown("\n".join(rows))
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # ── Section 2: Answer Key ────────────────────────────────────────────────
-    st.markdown("### 📝 2. Answer Key & Explanations")
-
-    for i, q in enumerate(questions):
-        user_ans = user_answers.get(i, "?")
-        correct_ans = q["correct"]
-        is_correct = user_ans == correct_ans
-        target_skill = q.get("target_skill", "Unknown")
-
-        icon = "✅" if is_correct else "❌"
-        badge_cls = "score-high" if is_correct else "score-low"
+        bg  = "#ebfbee" if passed else "#fff5f5"
+        fg  = "#2f9e44" if passed else "#e03131"
+        lbl = "Passed" if passed else "Not Passed"
 
         st.markdown(f"""
-        <div class="question-card">
-            <h4>{icon} Q{i + 1}: {q['question'][:80]}...</h4>
-            <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin:0.5rem 0;">
-                <div><span style="color:#FFFFFE;">Your Answer:</span> <b>{user_ans}</b></div>
-                <div><span style="color:#FFFFFE;">Correct:</span> <span class="score-badge {badge_cls}">{correct_ans}</span></div>
-                <div><span style="color:#FFFFFE;">Skill:</span> {target_skill}</div>
+        <div class="result-banner" style="background:{bg};border:1px solid {'#b2f2bb' if passed else '#ffc9c9'};">
+            <div class="result-score" style="color:{fg};">{score}/{total}</div>
+            <div class="result-sub" style="color:{fg};font-weight:700;">{lbl}</div>
+            <div class="result-label" style="color:{fg};">{pct}% &nbsp;·&nbsp; Pass threshold: 4 / 5</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="jd-page-sub" style="margin-bottom:12px;">Question breakdown</div>', unsafe_allow_html=True)
+        for i, q in enumerate(QUESTIONS):
+            ua = st.session_state.answers.get(str(i), "")
+            ok = ua.upper() == q["ans"].upper()
+            with st.expander(f"{'Correct' if ok else 'Incorrect'}  —  Q{i+1}: {q['q'][:75]}..."):
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown(f"**Your answer:** {ua}.  {q['opts'].get(ua.upper(), '—')}")
+                with c2:
+                    st.markdown(f"**Correct answer:** {q['ans']}.  {q['opts'][q['ans']]}")
+                st.info(q["exp"])
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Retake Assessment", use_container_width=True):
+                st.session_state.started   = True
+                st.session_state.answers   = {}
+                st.session_state.submitted = False
+                st.rerun()
+        with c2:
+            if st.button("Back to Skills", use_container_width=True):
+                st.session_state.started   = False
+                st.session_state.submitted = False
+                st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════
+# CERTIFICATES
+# ══════════════════════════════════════════════════════════════════
+elif page == "Certificates":
+    st.markdown('<div class="jd-page-title">Certificate Verification</div>', unsafe_allow_html=True)
+    st.markdown('<div class="jd-page-sub">Verify credentials from trusted issuers — verified certs appear as badges on your profile</div>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 2], gap="medium")
+
+    with col1:
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Add Certificate</div>', unsafe_allow_html=True)
+        cert_name = st.text_input("Certificate Name", placeholder="e.g. AWS Certified Developer")
+        issuer = st.selectbox("Issuer", ["EC-Council", "CompTIA", "edX", "Coursera", "Udemy"])
+        cred_id = st.text_input("Credential ID", placeholder="e.g. ECC12345678")
+        if st.button("Verify & Add", use_container_width=True, type="primary"):
+            if cert_name and cred_id:
+                with st.spinner("Contacting issuer..."):
+                    time.sleep(2)
+                st.success(f"{cert_name} verified via {issuer}.")
+            else:
+                st.warning("Fill in all fields.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">Supported Issuers</div>', unsafe_allow_html=True)
+        for iss in ["EC-Council", "CompTIA", "edX", "Coursera", "Udemy"]:
+            st.markdown(f'<div style="font-size:13px;color:#374151;padding:5px 0;border-bottom:1px solid #f3f4f6;">{iss}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="jd-card">', unsafe_allow_html=True)
+        st.markdown('<div class="jd-section-title">My Certificates</div>', unsafe_allow_html=True)
+        for c in CERTS:
+            kind = "green" if c["status"] == "Verified" else "amber"
+            st.markdown(f"""
+            <div class="cert-row">
+                <div class="cert-logo">{c["abbr"]}</div>
+                <div style="flex:1;">
+                    <div class="cert-name">{c["name"]}</div>
+                    <div class="cert-meta">{c["issuer"]} &nbsp;·&nbsp; Issued {c["date"]}</div>
+                </div>
+                {badge(c["status"], kind)}
             </div>
-            <div style="color:#FFFFFE; font-size:0.9rem; margin-top:0.5rem;">
-                💡 {q.get('explanation', 'N/A')}
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════
+# RECOMMENDATIONS
+# ══════════════════════════════════════════════════════════════════
+elif page == "Recommendations":
+    st.markdown('<div class="jd-page-title">Job Recommendations</div>', unsafe_allow_html=True)
+    st.markdown('<div class="jd-page-sub">AI-matched roles based on your occupation profile and O*NET skill data</div>', unsafe_allow_html=True)
+
+    # Occupation context
+    st.markdown("""
+    <div class="jd-card" style="display:flex;gap:20px;align-items:center;padding:18px 22px;">
+        <div style="flex:1;">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;
+                        color:#8a93a2;margin-bottom:4px;">Matched Occupation</div>
+            <div style="font-size:16px;font-weight:700;color:#1a1d23;">Software Developers</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:2px;">O*NET 15-1252.00 &nbsp;·&nbsp; 3 yrs experience &nbsp;·&nbsp; Riyadh</div>
+        </div>
+        <div style="text-align:right;">
+            <div style="font-size:32px;font-weight:800;color:#3b5bdb;letter-spacing:-1px;line-height:1;">91%</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Top match</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    colF1, colF2 = st.columns(2)
+    with colF1:
+        st.selectbox("Location", ["All locations", "Riyadh", "Remote", "Jeddah"])
+    with colF2:
+        st.selectbox("Job Type", ["All types", "Full-time", "Part-time", "Contract"])
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    for job in JOBS:
+        match_col = "#2f9e44" if job["match"] >= 85 else "#3b5bdb" if job["match"] >= 75 else "#e67700"
+        chips = "".join(f'<span class="jd-chip">{s}</span>' for s in job["skills"])
+        st.markdown(f"""
+        <div class="job-card">
+            <div style="flex:1;">
+                <div class="job-title">{job["title"]}</div>
+                <div class="job-company">{job["company"]}</div>
+                <div class="job-meta">{job["location"]} &nbsp;·&nbsp; Full-time</div>
+                <div style="margin-top:10px;">{chips}</div>
+            </div>
+            <div style="text-align:right;min-width:70px;padding-left:16px;">
+                <div class="job-match-num" style="color:{match_col};">{job["match"]}%</div>
+                <div class="job-match-label">match</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # ── Section 3: Scoring Logic ─────────────────────────────────────────────
-    st.markdown("### ⚖️ 3. Scoring Logic")
-    st.markdown(f"""
-    <div class="result-card">
-        <p><b>Pass Threshold:</b> {pass_threshold}/{total}</p>
-        <p><b>Reasoning:</b> {threshold_reason}</p>
-        <p><b>Your Score:</b> {score}/{total} → <span class="pass-badge {'pass-yes' if passed else 'pass-no'}">{'PASS' if passed else 'FAIL'}</span></p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="gradient-divider"></div>', unsafe_allow_html=True)
-
-    # ── Export & Restart ─────────────────────────────────────────────────────
-    st.markdown("### 💾 Export & Actions")
-    csv_data = generate_csv(skill_data, score, total, passed, threshold_reason, f"{occ_title} ({occ_code})")
-
-    col_dl, col_new = st.columns(2)
-    with col_dl:
-        st.download_button(
-            label="📥 Download CSV Report",
-            data=csv_data,
-            file_name=f"onet_assessment_{occ_code}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with col_new:
-        if st.button("🔄 New Assessment", use_container_width=True):
-            st.session_state.stage = "input"
-            st.session_state.skill_data = []
-            st.session_state.questions = []
-            st.session_state.user_answers = {}
-            st.rerun()
+    # AI Bio
+    st.markdown('<div class="jd-card" style="margin-top:8px;">', unsafe_allow_html=True)
+    st.markdown('<div class="jd-section-title">AI Bio Generator</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:13px;color:#6b7280;margin-bottom:12px;">Generate a tailored professional bio for a specific target role.</div>', unsafe_allow_html=True)
+    role = st.text_input("Target Role", placeholder="e.g. Senior Software Engineer at Google")
+    if st.button("Generate Bio", use_container_width=False, type="primary"):
+        if role:
+            with st.spinner("Generating with Nebius AI..."):
+                time.sleep(2)
+            st.markdown(f"""
+            <div style="background:#f7f8fa;border:1px solid #e8eaed;border-radius:8px;
+                        padding:16px;font-size:14px;color:#374151;line-height:1.65;margin-top:12px;">
+                Results-driven software engineer with 3 years of experience building scalable AI-powered systems
+                using Python, FastAPI, and Docker. Passionate about leveraging machine learning to deliver real-world
+                impact. Seeking a <strong>{role}</strong> position where I can contribute to
+                high-impact products and grow as a technical leader.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.warning("Enter a target role first.")
+    st.markdown('</div>', unsafe_allow_html=True)
