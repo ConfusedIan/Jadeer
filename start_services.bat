@@ -3,22 +3,22 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 echo Starting API Gateway...
-start cmd /k "cd APIGateway & venv\Scripts\activate & uvicorn main:app --reload --port 8000"
+start cmd /k "cd APIGateway && python -m uvicorn main:app --reload --port 8000"
 
 echo Starting Profile Service...
-start cmd /k "cd Profile_Service && venv\Scripts\activate && uvicorn main:app --reload --port 5002"
+start cmd /k "cd Profile_Service && python -m uvicorn main:app --reload --port 5002"
 
 echo Starting CV Service...
-start cmd /k "cd CV_Service && venv\Scripts\activate && uvicorn main:app --reload --port 5004"
+start cmd /k "cd CV_Service && python -m uvicorn main:app --reload --port 5004"
 
 echo Starting Assessment Service...
-start cmd /k "cd SkillsAssement && venv\Scripts\activate && uvicorn app:app --reload --port 5003"
+start cmd /k "cd SkillsAssement && python -m uvicorn app:app --reload --port 5003"
 
 echo Starting Recommendation Service...
-start cmd /k "cd Recommendation_Service && venv\Scripts\activate && uvicorn main:app --reload --port 5005"
+start cmd /k "cd Recommendation_Service && python -m uvicorn main:app --reload --port 5005"
 
 echo Starting Certificates Service...
-start cmd /k "cd Cert_Ver_Service && venv\Scripts\activate && uvicorn main:app --reload --port 5006"
+start cmd /k "cd Cert_Ver_Service && python -m uvicorn main:app --reload --port 5006"
 
 echo.
 echo Opening Swagger...

@@ -60,6 +60,16 @@ services:
     depends_on:
       - profile_service
     restart: unless-stopped
+
+  ranking_service:
+    build:
+      context: .
+      dockerfile: Ranking_Service/Dockerfile
+    ports:
+      - "5007:5007"
+    env_file:
+      - Ranking_Service/.env
+    restart: unless-stopped
     
   api_gateway:
     build:
@@ -75,10 +85,12 @@ services:
       - RECOMMENDATION_SERVICE_URL=http://recommendation_service:5005
       - CERT_SERVICE_URL=http://cert_service:5006
       - ASSESSMENT_SERVICE_URL=http://skills_assessment:5003
+      - RANKING_SERVICE_URL=http://ranking_service:5007
     depends_on:
       - profile_service
       - cv_service
       - recommendation_service
       - cert_service
       - skills_assessment
+      - ranking_service
     restart: unless-stopped
