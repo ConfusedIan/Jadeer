@@ -1,0 +1,96 @@
+services:
+  profile_service:
+    build:
+      context: .
+      dockerfile: Profile_Service/Dockerfile
+    ports:
+      - "5002:5002"
+    env_file:
+      - Profile_Service/.env
+    restart: unless-stopped
+
+  cv_service:
+    build:
+      context: .
+      dockerfile: CV_Service/Dockerfile
+    ports:
+      - "5004:5004"
+    env_file:
+      - CV_Service/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+    depends_on:
+      - profile_service
+    restart: unless-stopped
+
+  recommendation_service:
+    build:
+      context: .
+      dockerfile: Recommendation_Service/Dockerfile
+    ports:
+      - "5005:5005"
+    env_file:
+      - Recommendation_Service/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+    depends_on:
+      - profile_service
+    restart: unless-stopped
+
+  cert_service:
+      build:
+        context: .
+        dockerfile: Cert_Ver_Service/Dockerfile
+      ports:
+        - "5006:5006"
+      env_file:
+        - Cert_Ver_Service/.env
+      restart: unless-stopped
+
+  ranking_service:
+    build:
+      context: .
+      dockerfile: Ranking_Service/Dockerfile
+    ports:
+      - "5007:5007"
+    env_file:
+      - Ranking_Service/.env
+    restart: unless-stopped
+
+  skills_assessment:
+    build:
+      context: .
+      dockerfile: SkillsAssement/Dockerfile
+    ports:
+      - "5003:5003"
+    env_file:
+      - SkillsAssement/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+    depends_on:
+      - profile_service
+    restart: unless-stopped
+    
+  api_gateway:
+    build:
+      context: .
+      dockerfile: APIGateway/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - APIGateway/.env
+    environment:
+      - PROFILE_SERVICE_URL=http://profile_service:5002
+      - CV_SERVICE_URL=http://cv_service:5004
+      - RECOMMENDATION_SERVICE_URL=http://recommendation_service:5005
+      - CERT_SERVICE_URL=http://cert_service:5006
+      - ASSESSMENT_SERVICE_URL=http://skills_assessment:5003
+      - RANKING_SERVICE_URL=http://ranking_service:5007
+    depends_on:
+      - profile_service
+      - cv_service
+      - recommendation_service
+      - cert_service
+      - skills_assessment
+      - ranking_service
+    restart: unless-stopped
