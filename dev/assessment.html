@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assessment — Jadeer</title>
+  <style>
+    .step-bar {
+      display: flex; align-items: center; gap: 0;
+      margin-bottom: 28px; background: white;
+      border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; padding: 0;
+    }
+    .step {
+      flex: 1; padding: 14px 16px; text-align: center;
+      font-size: 13px; color: #94a3b8; border-right: 1px solid #e2e8f0;
+      transition: all 0.2s;
+    }
+    .step:last-child { border-right: none; }
+    .step.active { background: #4f46e5; color: white; font-weight: 600; }
+    .step.done { background: #f0fdf4; color: #16a34a; }
+    .step-num { display: block; font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* Q&A */
+    .question-card { margin-bottom: 16px; }
+    .q-text {
+      font-size: 14px; font-weight: 600; color: #1e293b;
+      margin-bottom: 12px; line-height: 1.5;
+    }
+    .q-num { color: #4f46e5; margin-right: 6px; }
+    .option-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border: 1px solid #e2e8f0;
+      border-radius: 8px; margin-bottom: 6px; cursor: pointer;
+      transition: all 0.1s; font-size: 13px;
+    }
+    .option-row:hover { border-color: #4f46e5; background: #f5f3ff; }
+    .option-row.selected { border-color: #4f46e5; background: #eef2ff; font-weight: 500; }
+    .option-row input[type=radio] { accent-color: #4f46e5; flex-shrink: 0; }
+
+    /* Results */
+    .result-hero {
+      text-align: center; padding: 32px 16px;
+    }
+    .score-circle {
+      width: 120px; height: 120px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; margin: 0 auto 16px;
+      border: 6px solid;
+    }
+    .score-big { font-size: 32px; font-weight: 800; }
+    .score-label { font-size: 12px; font-weight: 500; opacity: 0.7; margin-top: -2px; }
+    .pass-badge {
+      display: inline-block; padding: 6px 20px;
+      border-radius: 999px; font-size: 14px; font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">Skills Assessment</div>
+      <div class="page-subtitle">Verify your skills with an AI-generated assessment</div>
+    </div>
+
+    <!-- Step bar -->
+    <div class="step-bar">
+      <div class="step active" id="step1"><span class="step-num">1</span>Setup</div>
+      <div class="step" id="step2"><span class="step-num">2</span>Questions</div>
+      <div class="step" id="step3"><span class="step-num">3</span>Results</div>
+    </div>
+
+    <!-- Screen 1: Setup -->
+    <div class="screen active" id="screen1">
+      <div class="card">
+        <div class="card-title">Choose Occupation &amp; Skill</div>
+        <div class="select-group">
+          <div class="form-group">
+            <label>Occupation</label>
+            <select id="occSelect" onchange="onOccChange()">
+              <option value="">Loading occupations...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Skill to Assess</label>
+            <select id="skillSelect">
+              <option value="">Loading skills...</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:14px">
+          Can't find your occupation?
+          <span style="color:#4f46e5;cursor:pointer" onclick="toggleMatcher()">Match from my profile →</span>
+        </div>
+        <div id="matcherBox" style="display:none">
+          <div style="font-size:13px;color:#64748b;margin-bottom:10px">We'll suggest an occupation based on your profile experiences and skills.</div>
+          <button class="btn btn-ghost btn-sm" id="matchBtn" onclick="matchOccupation()">Match My Profile</button>
+          <div id="matchResult" style="font-size:13px;margin-top:8px;color:#16a34a"></div>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-primary" id="startBtn" onclick="startAssessment()">Start Assessment</button>
+        </div>
+        <div class="alert alert-error" id="setupErr"></div>
+      </div>
+    </div>
+
+    <!-- Screen 2: Questions -->
+    <div class="screen" id="screen2">
+      <div class="card">
+        <div id="assessmentMeta" style="margin-bottom:16px;font-size:13px;color:#64748b"></div>
+        <div id="questionsList"></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goBack()">← Back</button>
+          <button class="btn btn-primary" id="submitBtn" onclick="submitAssessment()">Submit Answers</button>
+        </div>
+        <div class="alert alert-error" id="submitErr"></div>
+      </div>
+    </div>
+
+    <!-- Screen 3: Results -->
+    <div class="screen" id="screen3">
+      <div class="card">
+        <div class="result-hero" id="resultHero"></div>
+        <div id="resultDetail"></div>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn btn-ghost" onclick="retake()">Take Another Assessment</button>
+          <a href="/dev/profile.html" class="btn btn-primary">View Profile →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/dev/_shared.js"></script>
+  <script>
+    initPage('assess');
+
+    let occupations = [];
+    let skills = [];
+    let generatedQuestions = [];
+    let selectedOcc = null;
+
+    function setStep(n) {
+      [1,2,3].forEach(i => {
+        const s = document.getElementById(`step${i}`);
+        s.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+      });
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(`screen${n}`).classList.add('active');
+    }
+
+    // ── Load data ─────────────────────────────────────────────────────────────
+    async function loadOccupations() {
+      const res = await api('/assessment/occupations');
+      if (!res || !res.ok) return;
+      const data = await res.json();
+      occupations = data.occupations || data || [];
+      const sel = document.getElementById('occSelect');
+      sel.innerHTML = '<option value="">Select an occupation...</option>' +
+        occupations.map(o => `<option value="${o.code || o.occupation_code}">${o.title || o.occupation_title}</option>`).join('');
+    }
+
+    async function loadSkills() {
+      const res = await api('/assessment/skills-list');
+      if (!res || !res.ok) return;
+      const data = await res.json();
+      skills = data.skills || data || [];
+      const sel = document.getElementById('skillSelect');
+      sel.innerHTML = '<option value="">Select a skill...</option>' +
+        skills.map(s => `<option value="${s.name || s}">${s.name || s}</option>`).join('');
+    }
+
+    function onOccChange() {
+      const code = document.getElementById('occSelect').value;
+      selectedOcc = occupations.find(o => (o.code || o.occupation_code) === code) || null;
+    }
+
+    function toggleMatcher() {
+      const box = document.getElementById('matcherBox');
+      box.style.display = box.style.display === 'none' ? '' : 'none';
+    }
+
+    async function matchOccupation() {
+      const btn = document.getElementById('matchBtn');
+      btn.disabled = true; btn.textContent = 'Matching...';
+      const res = await api('/assessment/match-occupation', { method: 'POST', body: JSON.stringify({}) });
+      btn.disabled = false; btn.textContent = 'Match My Profile';
+      if (!res || !res.ok) { document.getElementById('matchResult').textContent = 'Could not match'; return; }
+      const data = await res.json();
+      const code = data.occupation_code || data.code;
+      const title = data.occupation_title || data.title;
+      if (code) {
+        document.getElementById('occSelect').value = code;
+        onOccChange();
+        document.getElementById('matchResult').innerHTML = `Matched: <strong>${title}</strong>`;
+      }
+    }
+
+    // ── Start assessment ──────────────────────────────────────────────────────
+    async function startAssessment() {
+      const occCode = document.getElementById('occSelect').value;
+      const skillName = document.getElementById('skillSelect').value;
+      if (!occCode) return showAlert('setupErr', 'Please select an occupation');
+      if (!skillName) return showAlert('setupErr', 'Please select a skill');
+
+      const btn = document.getElementById('startBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating questions...';
+      document.getElementById('setupErr').className = 'alert alert-error';
+
+      try {
+        const res = await api('/assessment/generate-assessment', {
+          method: 'POST',
+          body: JSON.stringify({ occupation_code: occCode, skill_name: skillName }),
+        });
+        if (!res || !res.ok) {
+          const err = await res?.json().catch(() => ({}));
+          showAlert('setupErr', err.detail || err.error || 'Failed to generate assessment');
+          return;
+        }
+        const data = await res.json();
+        generatedQuestions = data.questions || data || [];
+        renderQuestions(skillName, occCode);
+        setStep(2);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Start Assessment';
+      }
+    }
+
+    function renderQuestions(skillName, occCode) {
+      const occ = occupations.find(o => (o.code || o.occupation_code) === occCode);
+      document.getElementById('assessmentMeta').innerHTML =
+        `Assessing <strong>${skillName}</strong>${occ ? ` for <strong>${occ.title || occ.occupation_title}</strong>` : ''}`;
+
+      document.getElementById('questionsList').innerHTML = generatedQuestions.map((q, i) => {
+        const options = q.options || q.choices || [];
+        return `<div class="question-card">
+          <div class="q-text"><span class="q-num">Q${i + 1}.</span>${q.question || q.text || q}</div>
+          ${options.map((opt, j) => {
+            const letter = String.fromCharCode(65 + j);
+            const optText = typeof opt === 'string' ? opt : opt.text || opt.label || opt;
+            return `<label class="option-row" onclick="selectOption(this)">
+              <input type="radio" name="q${i}" value="${letter}" />
+              <span><strong>${letter}.</strong> ${optText}</span>
+            </label>`;
+          }).join('')}
+        </div>`;
+      }).join('');
+    }
+
+    function selectOption(label) {
+      const name = label.querySelector('input').name;
+      document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+        r.closest('.option-row').classList.remove('selected');
+      });
+      label.classList.add('selected');
+    }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
+    async function submitAssessment() {
+      const occCode = document.getElementById('occSelect').value;
+      const skillName = document.getElementById('skillSelect').value;
+      const occ = occupations.find(o => (o.code || o.occupation_code) === occCode);
+
+      const answers = {};
+      let missing = false;
+      generatedQuestions.forEach((q, i) => {
+        const checked = document.querySelector(`input[name="q${i}"]:checked`);
+        if (!checked) { missing = true; return; }
+        const qId = q.id || `q${i}`;
+        answers[qId] = checked.value;
+      });
+      if (missing) return showAlert('submitErr', 'Please answer all questions');
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Evaluating...';
+      document.getElementById('submitErr').className = 'alert alert-error';
+
+      try {
+        const res = await api('/assessment/evaluate', {
+          method: 'POST',
+          body: JSON.stringify({
+            occupation_code: occCode,
+            occupation_title: occ?.title || occ?.occupation_title || '',
+            skill_name: skillName,
+            questions: generatedQuestions,
+            answers,
+          }),
+        });
+        if (!res || !res.ok) {
+          const err = await res?.json().catch(() => ({}));
+          showAlert('submitErr', err.detail || err.error || 'Evaluation failed');
+          return;
+        }
+        const data = await res.json();
+        renderResults(data, skillName);
+        setStep(3);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Submit Answers';
+      }
+    }
+
+    function renderResults(data, skillName) {
+      const score = data.score ?? data.percentage ?? 0;
+      const passed = data.passed ?? data.pass ?? (score >= 70);
+      const color = passed ? '#16a34a' : '#dc2626';
+      const borderColor = passed ? '#bbf7d0' : '#fecaca';
+
+      document.getElementById('resultHero').innerHTML = `
+        <div class="score-circle" style="border-color:${borderColor};color:${color}">
+          <div class="score-big">${Math.round(score)}%</div>
+          <div class="score-label">Score</div>
+        </div>
+        <div class="pass-badge" style="background:${passed ? '#f0fdf4' : '#fef2f2'};color:${color}">
+          ${passed ? '✓ Passed' : '✗ Not Passed'}
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#1e293b">${skillName}</div>
+        ${data.feedback ? `<div style="font-size:13px;color:#64748b;margin-top:8px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6">${data.feedback}</div>` : ''}
+      `;
+
+      const detailEl = document.getElementById('resultDetail');
+      if (data.correct != null && data.total != null) {
+        detailEl.innerHTML = `
+          <div style="text-align:center;padding:12px;background:#f8fafc;border-radius:8px;font-size:14px;color:#475569">
+            ${data.correct} correct out of ${data.total} questions
+          </div>`;
+      } else {
+        detailEl.innerHTML = '';
+      }
+    }
+
+    function goBack() { setStep(1); }
+    function retake() { setStep(1); document.getElementById('questionsList').innerHTML = ''; generatedQuestions = []; }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadOccupations();
+    loadSkills();
+  </script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CV Builder — Jadeer</title>
+  <style>
+    .two-col { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 13px; font-weight: 500; color: #374151; }
+    .toggle-sub { font-size: 12px; color: #94a3b8; margin-top: 1px; }
+    input[type=checkbox] { width: 16px; height: 16px; accent-color: #4f46e5; cursor: pointer; flex-shrink: 0; }
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    input[type=range] { flex: 1; accent-color: #4f46e5; }
+    .slider-val { font-size: 13px; font-weight: 600; color: #4f46e5; min-width: 36px; }
+    .exp-override {
+      padding: 10px 12px; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px;
+    }
+    .exp-override-title { font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+    .exp-override textarea { font-size: 12px; min-height: 60px; }
+    .history-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .history-row:last-child { border-bottom: none; }
+    .history-name { font-size: 14px; font-weight: 500; flex: 1; }
+    .history-date { font-size: 12px; color: #94a3b8; }
+    .generate-btn {
+      width: 100%; padding: 13px; background: #4f46e5; color: white;
+      border: none; border-radius: 8px; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: background 0.1s;
+      margin-top: 4px;
+    }
+    .generate-btn:hover { background: #4338ca; }
+    .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .bio-actions { display: flex; gap: 8px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">CV Builder</div>
+      <div class="page-subtitle">Customize and generate your professional CV</div>
+    </div>
+
+    <div id="loadingState" style="text-align:center;padding:40px;color:#64748b">
+      <div class="spinner dark" style="width:24px;height:24px;margin:0 auto 12px"></div>
+      Loading your profile...
+    </div>
+
+    <div id="cvContent" style="display:none">
+      <div class="two-col">
+        <!-- Left: config panel -->
+        <div>
+          <!-- Sections -->
+          <div class="card">
+            <div class="card-title">Sections to Include</div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Work Experience</div></div>
+              <input type="checkbox" id="inc_exp" checked />
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Education</div></div>
+              <input type="checkbox" id="inc_edu" checked />
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Certificates</div></div>
+              <input type="checkbox" id="inc_certs" checked />
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Skills</div></div>
+              <input type="checkbox" id="inc_skills" checked />
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Assessment Badges</div>
+                <div class="toggle-sub">Show ★ for skills above threshold</div>
+              </div>
+              <input type="checkbox" id="inc_scores" checked />
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Certificate Verification Badges</div>
+                <div class="toggle-sub">Show verified / not verified status</div>
+              </div>
+              <input type="checkbox" id="inc_badges" checked />
+            </div>
+          </div>
+
+          <!-- Skill threshold -->
+          <div class="card">
+            <div class="card-title">Skill Badge Threshold</div>
+            <div class="slider-row">
+              <input type="range" id="threshold" min="0" max="100" value="70" oninput="document.getElementById('thresholdVal').textContent=this.value+'%'" />
+              <span class="slider-val" id="thresholdVal">70%</span>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:6px">Skills with score ≥ threshold get a ★ badge in the CV</div>
+          </div>
+
+          <!-- Bio -->
+          <div class="card">
+            <div class="card-title">Bio</div>
+            <div class="form-group">
+              <label>Custom bio (overrides profile bio)</label>
+              <textarea id="custom_bio" rows="4" placeholder="Leave blank to use your profile bio"></textarea>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">Or generate one with AI — go to <a href="/dev/recommendation.html" style="color:#4f46e5">Recommendations</a> → Bio Generator, then paste it here.</div>
+          </div>
+
+          <!-- Save to history -->
+          <div class="card">
+            <div class="card-title">Save to History</div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Save this CV to history</div></div>
+              <input type="checkbox" id="save_history" />
+            </div>
+            <div class="form-group" style="margin-top:12px" id="cvNameGroup">
+              <label>CV Name (optional)</label>
+              <input type="text" id="cv_name" placeholder="e.g. Software Engineer 2025" />
+            </div>
+          </div>
+
+          <button class="generate-btn" id="genBtn" onclick="generateCV()">Generate CV</button>
+          <div class="alert alert-error" id="genErr"></div>
+        </div>
+
+        <!-- Right: experience overrides + history -->
+        <div>
+          <!-- Experience overrides -->
+          <div class="card" id="expOverridesCard">
+            <div class="card-title">Experience Descriptions</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:12px">Edit how each experience is described in your CV. Leave blank to use the original.</div>
+            <div id="expOverrideList"></div>
+          </div>
+
+          <!-- CV History -->
+          <div class="card">
+            <div class="card-title">
+              CV History
+              <button class="btn btn-ghost btn-sm" onclick="loadHistory()">Refresh</button>
+            </div>
+            <div id="historyList"><div class="empty"><div class="empty-icon">📋</div>No saved CVs yet</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/dev/_shared.js"></script>
+  <script>
+    initPage('cv');
+
+    let experiences = [];
+
+    async function loadData() {
+      const res = await api('/profile/me/bundle');
+      if (!res || !res.ok) {
+        document.getElementById('loadingState').textContent = 'Failed to load profile';
+        return;
+      }
+      const data = await res.json();
+      experiences = data.experiences || [];
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('cvContent').style.display = '';
+      renderExpOverrides();
+    }
+
+    function renderExpOverrides() {
+      const el = document.getElementById('expOverrideList');
+      if (!experiences.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">💼</div>No experiences in your profile</div>';
+        return;
+      }
+      el.innerHTML = experiences.map(e => `
+        <div class="exp-override">
+          <div class="exp-override-title">${e.job_title || 'Untitled'} · ${e.company || ''}</div>
+          <textarea id="override_${e.id}" placeholder="${e.description || 'Original description (will be used if blank)'}">${''}</textarea>
+        </div>`).join('');
+    }
+
+    async function generateCV() {
+      const btn = document.getElementById('genBtn');
+      btn.disabled = true; btn.textContent = 'Generating...';
+      document.getElementById('genErr').className = 'alert alert-error';
+
+      const overrides = {};
+      experiences.forEach(e => {
+        const v = (document.getElementById(`override_${e.id}`)?.value || '').trim();
+        if (v) overrides[e.id] = v;
+      });
+
+      const payload = {
+        include_experience: document.getElementById('inc_exp').checked,
+        include_education: document.getElementById('inc_edu').checked,
+        include_certificates: document.getElementById('inc_certs').checked,
+        include_skills: document.getElementById('inc_skills').checked,
+        include_scores: document.getElementById('inc_scores').checked,
+        include_verified_badges: document.getElementById('inc_badges').checked,
+        skill_threshold: parseFloat(document.getElementById('threshold').value),
+        save_to_history: document.getElementById('save_history').checked,
+        cv_name: document.getElementById('cv_name').value.trim() || null,
+        custom_bio: document.getElementById('custom_bio').value.trim() || null,
+        experience_overrides: Object.keys(overrides).length ? overrides : null,
+      };
+
+      try {
+        const res = await api('/cv/me.pdf', { method: 'POST', body: JSON.stringify(payload) });
+        if (!res || !res.ok) {
+          const err = await res?.json().catch(() => ({}));
+          showAlert('genErr', err.detail || err.error || 'Failed to generate CV');
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'cv.pdf'; a.click();
+        URL.revokeObjectURL(url);
+        if (document.getElementById('save_history').checked) loadHistory();
+      } finally {
+        btn.disabled = false; btn.textContent = 'Generate CV';
+      }
+    }
+
+    async function loadHistory() {
+      const res = await api('/cv/history');
+      if (!res || !res.ok) return;
+      const data = await res.json();
+      const el = document.getElementById('historyList');
+      const items = data.cvs || data.items || data || [];
+      if (!items.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No saved CVs yet</div>';
+        return;
+      }
+      el.innerHTML = items.map(cv => `
+        <div class="history-row">
+          <div>
+            <div class="history-name">${cv.name || cv.cv_name || 'Unnamed CV'}</div>
+            <div class="history-date">${fmt(cv.created_at)}</div>
+          </div>
+          <a href="#" class="btn btn-ghost btn-sm" onclick="downloadHistory('${cv.id}');return false">Download</a>
+        </div>`).join('');
+    }
+
+    async function downloadHistory(id) {
+      const res = await api(`/cv/history/${id}`);
+      if (!res || !res.ok) return alert('Failed to download');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `cv_${id}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    loadData();
+    loadHistory();
+  </script>
+</body>
+</html>

@@ -3,411 +3,273 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Recommendation Service Tester</title>
+  <title>Recommendations — Jadeer</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 13px;
-      background: #f1f5f9;
-      color: #1e293b;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
+    .result-section { margin-bottom: 20px; }
+    .result-section-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: #64748b; margin-bottom: 10px;
     }
-
-    .topbar {
-      background: #0f172a;
-      color: white;
-      padding: 0 16px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
+    .result-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      display: flex; flex-direction: column;
+      padding: 10px 14px; border-radius: 8px;
+      border: 1px solid; font-size: 13px; max-width: 280px;
     }
-    .topbar strong { font-size: 14px; white-space: nowrap; }
-    .topbar input {
-      flex: 1;
-      max-width: 520px;
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: none;
-      font-size: 12px;
-      font-family: monospace;
-      background: rgba(255,255,255,0.12);
-      color: white;
+    .chip-name { font-weight: 600; margin-bottom: 2px; }
+    .chip-desc { font-size: 12px; opacity: 0.8; }
+    .chip-match { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+    .chip-exp { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .chip-cert { background: #fefce8; border-color: #fef08a; color: #854d0e; }
+    .chip-dev { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    .keyword-box {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px;
+      min-height: 44px; cursor: text;
     }
-    .topbar input::placeholder { color: rgba(255,255,255,0.4); }
-    .topbar input:focus { outline: 2px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.2); }
-    .nav-link {
-      font-size: 12px;
-      color: rgba(255,255,255,0.7);
-      text-decoration: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      border: 1px solid rgba(255,255,255,0.2);
-      white-space: nowrap;
+    .keyword-box input {
+      border: none; outline: none; flex: 1; min-width: 120px;
+      font-size: 13px; padding: 2px 4px; box-shadow: none !important;
     }
-    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
-
-    .split {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
+    .kw-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; background: #eef2ff; color: #4f46e5;
+      border-radius: 6px; font-size: 12px; font-weight: 500;
     }
-
-    /* ── Left panel ── */
-    .panel {
-      width: 380px;
-      flex-shrink: 0;
-      background: white;
-      border-right: 1px solid #e2e8f0;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
+    .kw-remove { cursor: pointer; opacity: 0.6; }
+    .kw-remove:hover { opacity: 1; }
+    .bio-output {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 16px; font-size: 14px; line-height: 1.7; color: #1e293b;
+      white-space: pre-wrap; min-height: 80px;
     }
-
-    .sec-head {
-      padding: 8px 14px;
-      background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-      border-top: 1px solid #e2e8f0;
-      font-weight: 700;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #475569;
+    .copy-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+    .score-bar-wrap {
+      display: flex; align-items: center; gap: 12px; margin-top: 8px;
     }
-
-    .sec-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-
-    label.lbl { display: block; font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 3px; }
-    .hint { font-size: 11px; color: #94a3b8; font-weight: 400; }
-
-    textarea, input[type=text] {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font-size: 12px;
-      font-family: inherit;
-      color: #1e293b;
-      background: white;
+    .score-bar-bg {
+      flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;
     }
-    textarea { resize: vertical; min-height: 100px; }
-    textarea:focus, input:focus { outline: 2px solid #4f46e5; border-color: #4f46e5; }
-
-    .btn {
-      width: 100%;
-      padding: 9px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .btn:hover { filter: brightness(0.92); }
-    .btn-dark   { background: #0f172a; color: white; }
-    .btn-purple { background: #7c3aed; color: white; }
-
-    /* ── Right panel (results) ── */
-    .results {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: #94a3b8;
-      text-align: center;
-    }
-    .empty-state .ico { font-size: 40px; }
-
-    /* ── Result cards ── */
-    .result-section {
-      background: white;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      overflow: hidden;
-    }
-    .result-head {
-      padding: 10px 14px;
-      font-weight: 700;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .result-head.blue   { background: #eff6ff; color: #1d4ed8; border-left: 3px solid #3b82f6; }
-    .result-head.purple { background: #f5f3ff; color: #6d28d9; border-left: 3px solid #7c3aed; }
-    .result-head.green  { background: #f0fdf4; color: #15803d; border-left: 3px solid #22c55e; }
-    .result-head.orange { background: #fff7ed; color: #c2410c; border-left: 3px solid #f97316; }
-
-    .result-item {
-      padding: 10px 14px;
-      border-bottom: 1px solid #f1f5f9;
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-    }
-    .result-item:last-child { border-bottom: none; }
-    .item-name { font-weight: 600; font-size: 12px; }
-    .item-desc { font-size: 12px; color: #475569; margin-top: 2px; line-height: 1.5; }
-    .item-meta { font-size: 11px; color: #94a3b8; margin-top: 1px; }
-    .dot-icon { width: 7px; height: 7px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
-    .dot-blue   { background: #3b82f6; }
-    .dot-purple { background: #7c3aed; }
-    .dot-green  { background: #22c55e; }
-    .dot-orange { background: #f97316; }
-
-    /* bio result */
-    .bio-result {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 16px;
-      font-size: 13px;
-      line-height: 1.7;
-      color: #1e293b;
-      border-left: 3px solid #7c3aed;
-    }
-    .bio-result .bio-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #7c3aed;
-      margin-bottom: 8px;
-    }
-
-    .job-title-banner {
-      background: #0f172a;
-      color: white;
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .job-title-banner span { font-size: 11px; font-weight: 400; opacity: 0.6; display: block; margin-bottom: 2px; }
-
-    .status {
-      flex-shrink: 0;
-      padding: 5px 14px;
-      background: white;
-      border-top: 1px solid #e2e8f0;
-      font-size: 11px;
-      color: #64748b;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .sdot { width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; }
-    .sdot.ok   { background: #22c55e; }
-    .sdot.err  { background: #ef4444; }
-    .sdot.busy { background: #f59e0b; animation: blink .7s infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    .score-val { font-size: 13px; font-weight: 700; min-width: 36px; text-align: right; }
   </style>
 </head>
 <body>
-
-<div class="topbar">
-  <strong>Recommendation Tester</strong>
-  <input type="text" id="token" placeholder="Paste your Supabase JWT here…" />
-  <a class="nav-link" href="/dev/">← CV Tester</a>
-</div>
-
-<div class="split">
-
-  <!-- Left: inputs -->
-  <div class="panel">
-
-    <div class="sec-head">Analyze Profile vs Job</div>
-    <div class="sec-body">
-      <div>
-        <label class="lbl">Job Description</label>
-        <textarea id="jobDesc" placeholder="Paste the full job description here…"></textarea>
-      </div>
-      <button class="btn btn-dark" onclick="doAnalyze()">Analyze</button>
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">Recommendations</div>
+      <div class="page-subtitle">Analyze your profile against job requirements or generate a professional bio</div>
     </div>
 
-    <div class="sec-head">Generate AI Bio</div>
-    <div class="sec-body">
-      <div>
-        <label class="lbl">Keywords <span class="hint">comma-separated (optional)</span></label>
-        <input type="text" id="bioKw" placeholder="e.g. cloud, team lead, problem solver" />
-      </div>
-      <button class="btn btn-purple" onclick="doGenerateBio()">Generate Bio</button>
+    <div class="tabs" id="recTabs">
+      <div class="tab active" data-tab="analyze" onclick="switchTab('recTabs','rec-','analyze')">Job Analyzer</div>
+      <div class="tab" data-tab="bio" onclick="switchTab('recTabs','rec-','bio')">Bio Generator</div>
     </div>
 
+    <!-- Job Analyzer -->
+    <div class="tab-pane active" id="rec-analyze">
+      <div class="card">
+        <div class="card-title">Job Description</div>
+        <div class="form-group">
+          <textarea id="jobDesc" rows="8" placeholder="Paste the full job description here..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">Analyze</button>
+        </div>
+        <div class="alert alert-error" id="analyzeErr"></div>
+      </div>
+
+      <div id="analysisResult" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div class="card-title" style="margin-bottom:0">Analysis Results</div>
+            <div id="overallScore"></div>
+          </div>
+
+          <div class="result-section" id="sec_matching_skills" style="display:none">
+            <div class="result-section-title">✅ Matching Skills</div>
+            <div class="result-chips" id="chips_matching_skills"></div>
+          </div>
+
+          <div class="result-section" id="sec_matching_experiences" style="display:none">
+            <div class="result-section-title">💼 Relevant Experience</div>
+            <div class="result-chips" id="chips_matching_experiences"></div>
+          </div>
+
+          <div class="result-section" id="sec_matching_certifications" style="display:none">
+            <div class="result-section-title">🏆 Matching Certifications</div>
+            <div class="result-chips" id="chips_matching_certifications"></div>
+          </div>
+
+          <div class="result-section" id="sec_areas_for_development" style="display:none">
+            <div class="result-section-title">📈 Areas for Development</div>
+            <div class="result-chips" id="chips_areas_for_development"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio Generator -->
+    <div class="tab-pane" id="rec-bio">
+      <div class="card">
+        <div class="card-title">Bio Generator</div>
+        <div class="form-group">
+          <label>Keywords to include (press Enter or comma to add)</label>
+          <div class="keyword-box" id="kwBox" onclick="document.getElementById('kwInput').focus()">
+            <input type="text" id="kwInput" placeholder="leadership, Python, fintech..." onkeydown="addKeyword(event)" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="bioBtn" onclick="generateBio()">Generate Bio</button>
+        </div>
+        <div class="alert alert-error" id="bioErr"></div>
+      </div>
+
+      <div id="bioResult" style="display:none">
+        <div class="card">
+          <div class="card-title">Generated Bio</div>
+          <div class="bio-output" id="bioOutput"></div>
+          <div class="copy-row">
+            <button class="btn btn-ghost btn-sm" onclick="copyBio()">Copy to clipboard</button>
+            <a href="/dev/cv.html" class="btn btn-ghost btn-sm" style="margin-left:6px">Use in CV Builder →</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Right: results -->
-  <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-    <div class="results" id="results">
-      <div class="empty-state">
-        <div class="ico">🤖</div>
-        <p>Paste a job description and click <strong>Analyze</strong><br>to see AI recommendations.</p>
-      </div>
-    </div>
-    <div class="status">
-      <div class="sdot" id="sdot"></div>
-      <span id="smsg">Idle</span>
-    </div>
-  </div>
+  <script src="/dev/_shared.js"></script>
+  <script>
+    initPage('rec');
 
-</div>
+    // ── Keywords ──────────────────────────────────────────────────────────────
+    let keywords = [];
 
-<script>
-function tok() { return document.getElementById('token').value.trim(); }
-function authH(extra = {}) {
-  const h = { ...extra };
-  const t = tok();
-  if (t) h['Authorization'] = 'Bearer ' + t;
-  return h;
-}
-function setStatus(state, msg) {
-  document.getElementById('sdot').className = 'sdot ' + state;
-  document.getElementById('smsg').textContent = msg;
-}
+    function renderKeywords() {
+      const box = document.getElementById('kwBox');
+      box.querySelectorAll('.kw-tag').forEach(t => t.remove());
+      keywords.forEach((kw, i) => {
+        const span = document.createElement('span');
+        span.className = 'kw-tag';
+        span.innerHTML = `${kw} <span class="kw-remove" onclick="removeKeyword(${i})">×</span>`;
+        box.insertBefore(span, document.getElementById('kwInput'));
+      });
+    }
 
-// ── Analyze ─────────────────────────────────────────────────────────────────
-async function doAnalyze() {
-  const jd = document.getElementById('jobDesc').value.trim();
-  if (!jd) { alert('Paste a job description first.'); return; }
-  if (!tok()) { alert('Paste your JWT token first.'); return; }
+    function addKeyword(e) {
+      if (e.key !== 'Enter' && e.key !== ',') return;
+      e.preventDefault();
+      const val = document.getElementById('kwInput').value.replace(',', '').trim();
+      if (val && !keywords.includes(val)) { keywords.push(val); renderKeywords(); }
+      document.getElementById('kwInput').value = '';
+    }
 
-  setStatus('busy', 'Analyzing…');
-  document.getElementById('results').innerHTML = '<div class="empty-state"><div class="ico">⏳</div><p>Analyzing your profile…</p></div>';
+    function removeKeyword(i) { keywords.splice(i, 1); renderKeywords(); }
 
-  try {
-    const res = await fetch('/recommendation/analyze', {
-      method: 'POST',
-      headers: authH({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ job_description: jd }),
-    });
-    const data = await res.json();
-    if (!res.ok) { showError(data); setStatus('err', `Error ${res.status}`); return; }
-    renderResults(data);
-    setStatus('ok', `Done — analyzed for: ${data.job_title || 'role'}`);
-  } catch(e) { showError(String(e)); setStatus('err', 'Network error'); }
-}
+    // ── Analyze ───────────────────────────────────────────────────────────────
+    async function analyze() {
+      const jd = document.getElementById('jobDesc').value.trim();
+      if (!jd) return showAlert('analyzeErr', 'Please enter a job description');
 
-// ── Generate Bio ─────────────────────────────────────────────────────────────
-async function doGenerateBio() {
-  if (!tok()) { alert('Paste your JWT token first.'); return; }
-  setStatus('busy', 'Generating bio…');
+      const btn = document.getElementById('analyzeBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+      document.getElementById('analysisResult').style.display = 'none';
+      document.getElementById('analyzeErr').className = 'alert alert-error';
 
-  const kw = document.getElementById('bioKw').value.split(',').map(k => k.trim()).filter(Boolean);
+      try {
+        const res = await api('/recommendation/analyze', {
+          method: 'POST',
+          body: JSON.stringify({ job_description: jd }),
+        });
+        if (!res || !res.ok) {
+          const err = await res?.json().catch(() => ({}));
+          showAlert('analyzeErr', err.detail || err.error || 'Analysis failed');
+          return;
+        }
+        const data = await res.json();
+        renderAnalysis(data);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Analyze';
+      }
+    }
 
-  try {
-    const res = await fetch('/recommendation/generate-bio', {
-      method: 'POST',
-      headers: authH({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ keywords: kw }),
-    });
-    const data = await res.json();
-    if (!res.ok) { showError(data); setStatus('err', `Error ${res.status}`); return; }
-    renderBio(data.bio || '');
-    setStatus('ok', 'Bio generated');
-  } catch(e) { showError(String(e)); setStatus('err', 'Network error'); }
-}
+    const CHIP_CLASSES = {
+      matching_skills: 'chip-match',
+      matching_experiences: 'chip-exp',
+      matching_certifications: 'chip-cert',
+      areas_for_development: 'chip-dev',
+    };
 
-// ── Render analysis results ──────────────────────────────────────────────────
-function renderResults(d) {
-  const r = document.getElementById('results');
-  r.innerHTML = '';
+    function renderAnalysis(data) {
+      const result = data.result || data;
 
-  // Job title banner
-  if (d.job_title) {
-    r.innerHTML += `<div class="job-title-banner"><span>Analyzing for</span>${d.job_title}</div>`;
-  }
+      // Overall score
+      const scoreEl = document.getElementById('overallScore');
+      if (result.overall_match_score != null) {
+        const score = result.overall_match_score;
+        const color = score >= 70 ? '#16a34a' : score >= 40 ? '#ca8a04' : '#dc2626';
+        scoreEl.innerHTML = `
+          <div style="text-align:right">
+            <div style="font-size:24px;font-weight:800;color:${color}">${score}%</div>
+            <div style="font-size:12px;color:#64748b">match</div>
+          </div>`;
+      } else {
+        scoreEl.innerHTML = '';
+      }
 
-  // Relevant Skills
-  if (d.relevant_skills?.length) {
-    r.innerHTML += `
-      <div class="result-section">
-        <div class="result-head blue">✓ Relevant Skills</div>
-        ${d.relevant_skills.map(s => `
-          <div class="result-item">
-            <div class="dot-icon dot-blue"></div>
-            <div><div class="item-name">${s.name}</div><div class="item-desc">${s.description || s.reason || ''}</div></div>
-          </div>`).join('')}
-      </div>`;
-  }
+      const sections = ['matching_skills', 'matching_experiences', 'matching_certifications', 'areas_for_development'];
+      sections.forEach(key => {
+        const items = result[key] || [];
+        const sec = document.getElementById(`sec_${key}`);
+        const chips = document.getElementById(`chips_${key}`);
+        if (!items.length) { sec.style.display = 'none'; return; }
+        sec.style.display = '';
+        chips.innerHTML = items.map(item => {
+          const name = item.name || item;
+          const desc = item.description || '';
+          return `<div class="chip ${CHIP_CLASSES[key]}">
+            <div class="chip-name">${name}</div>
+            ${desc ? `<div class="chip-desc">${desc}</div>` : ''}
+          </div>`;
+        }).join('');
+      });
 
-  // Matching Experiences
-  if (d.matching_experiences?.length) {
-    r.innerHTML += `
-      <div class="result-section">
-        <div class="result-head purple">💼 Matching Experience</div>
-        ${d.matching_experiences.map(e => `
-          <div class="result-item">
-            <div class="dot-icon dot-purple"></div>
-            <div>
-              <div class="item-name">${e.job_title} — ${e.company}</div>
-              <div class="item-meta">${e.duration || ''}</div>
-              <div class="item-desc">${e.description || e.reason || ''}</div>
-            </div>
-          </div>`).join('')}
-      </div>`;
-  }
+      document.getElementById('analysisResult').style.display = '';
+    }
 
-  // Recommended Certifications
-  if (d.recommended_certifications?.length) {
-    r.innerHTML += `
-      <div class="result-section">
-        <div class="result-head green">🎓 Recommended Certifications</div>
-        ${d.recommended_certifications.map(c => `
-          <div class="result-item">
-            <div class="dot-icon dot-green"></div>
-            <div><div class="item-name">${c.name}</div><div class="item-desc">${c.description || c.reason || ''}</div></div>
-          </div>`).join('')}
-      </div>`;
-  }
+    // ── Bio ───────────────────────────────────────────────────────────────────
+    async function generateBio() {
+      const btn = document.getElementById('bioBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating...';
+      document.getElementById('bioResult').style.display = 'none';
+      document.getElementById('bioErr').className = 'alert alert-error';
 
-  // Areas for Development
-  if (d.areas_for_development?.length) {
-    r.innerHTML += `
-      <div class="result-section">
-        <div class="result-head orange">⚠ Areas for Development</div>
-        ${d.areas_for_development.map(a => `
-          <div class="result-item">
-            <div class="dot-icon dot-orange"></div>
-            <div><div class="item-name">${a.skill}</div><div class="item-desc">${a.description || a.reason || ''}</div></div>
-          </div>`).join('')}
-      </div>`;
-  }
-}
+      try {
+        const res = await api('/recommendation/generate-bio', {
+          method: 'POST',
+          body: JSON.stringify({ keywords }),
+        });
+        if (!res || !res.ok) {
+          const err = await res?.json().catch(() => ({}));
+          showAlert('bioErr', err.detail || err.error || 'Generation failed');
+          return;
+        }
+        const data = await res.json();
+        document.getElementById('bioOutput').textContent = data.bio || 'No bio generated';
+        document.getElementById('bioResult').style.display = '';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Generate Bio';
+      }
+    }
 
-function renderBio(bio) {
-  const r = document.getElementById('results');
-  r.innerHTML = `
-    <div class="bio-result">
-      <div class="bio-label">Generated Bio</div>
-      ${bio}
-    </div>`;
-}
-
-function showError(data) {
-  document.getElementById('results').innerHTML = `
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;font-size:12px;color:#b91c1c;white-space:pre-wrap;font-family:monospace">
-      ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
-    </div>`;
-}
-</script>
+    function copyBio() {
+      const text = document.getElementById('bioOutput').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy to clipboard', 2000);
+      });
+    }
+  </script>
 </body>
 </html>

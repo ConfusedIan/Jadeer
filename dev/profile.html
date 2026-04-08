@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile — Jadeer</title>
+  <style>
+    .profile-view-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+    }
+    .field-label { font-size: 12px; color: #64748b; margin-bottom: 3px; }
+    .field-value { font-size: 14px; color: #1e293b; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 9px;
+      background: #eef2ff; color: #4f46e5;
+      border-radius: 6px; font-size: 12px; font-weight: 500;
+    }
+    .tag-remove { cursor: pointer; opacity: 0.6; }
+    .tag-remove:hover { opacity: 1; }
+    .tags-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-input-box {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      padding: 6px 8px; border: 1px solid #e2e8f0;
+      border-radius: 7px; min-height: 40px; cursor: text; align-items: center;
+    }
+    .tag-input-box input {
+      border: none; outline: none; padding: 2px 4px;
+      font-size: 13px; min-width: 80px; flex: 1;
+      box-shadow: none !important;
+    }
+    .section-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">Profile</div>
+      <div class="page-subtitle">Manage your personal information, experience, and qualifications</div>
+    </div>
+
+    <!-- Basic Info -->
+    <div class="card">
+      <div class="card-title">
+        Basic Information
+        <button class="btn btn-ghost btn-sm" id="editToggleBtn" onclick="toggleEdit()">Edit</button>
+      </div>
+
+      <div id="profileView">
+        <div class="profile-view-grid">
+          <div><div class="field-label">Full Name</div><div class="field-value" id="v_name">—</div></div>
+          <div><div class="field-label">Location</div><div class="field-value" id="v_location">—</div></div>
+          <div><div class="field-label">Phone</div><div class="field-value" id="v_phone">—</div></div>
+          <div><div class="field-label">LinkedIn</div><div class="field-value" id="v_linkedin">—</div></div>
+          <div style="grid-column:span 2"><div class="field-label">Bio</div><div class="field-value" id="v_bio" style="line-height:1.6">—</div></div>
+          <div style="grid-column:span 2"><div class="field-label">Languages</div><div class="tags-row" id="v_langs" style="margin-top:4px"></div></div>
+        </div>
+      </div>
+
+      <div id="profileForm" style="display:none">
+        <div class="form-grid">
+          <div class="form-group"><label>Full Name</label><input type="text" id="e_name" /></div>
+          <div class="form-group"><label>Location</label><input type="text" id="e_location" /></div>
+          <div class="form-group"><label>Phone</label><input type="tel" id="e_phone" /></div>
+          <div class="form-group"><label>LinkedIn URL</label><input type="url" id="e_linkedin" /></div>
+          <div class="form-group span2"><label>Bio</label><textarea id="e_bio" rows="4"></textarea></div>
+          <div class="form-group span2">
+            <label>Languages (press Enter or comma to add)</label>
+            <div class="tag-input-box" id="langBox" onclick="document.getElementById('langInput').focus()">
+              <input type="text" id="langInput" placeholder="Arabic, English..." onkeydown="addLang(event)" />
+            </div>
+          </div>
+        </div>
+        <div class="section-footer">
+          <button class="btn btn-ghost btn-sm" onclick="toggleEdit()">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="saveBtn" onclick="saveProfile()">Save Changes</button>
+        </div>
+        <div class="alert alert-error" id="profileErr"></div>
+        <div class="alert alert-success" id="profileOk"></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="mainTabs">
+      <div class="tab active" data-tab="exp" onclick="switchTab('mainTabs','tab-','exp')">Experience</div>
+      <div class="tab" data-tab="edu" onclick="switchTab('mainTabs','tab-','edu')">Education</div>
+      <div class="tab" data-tab="certs" onclick="switchTab('mainTabs','tab-','certs')">Certificates</div>
+      <div class="tab" data-tab="skills" onclick="switchTab('mainTabs','tab-','skills')">Skills</div>
+    </div>
+
+    <!-- Experience -->
+    <div class="tab-pane active" id="tab-exp">
+      <div class="card">
+        <div class="card-title">Work Experience <button class="btn btn-primary btn-sm" onclick="toggleForm('expForm')">+ Add</button></div>
+        <div class="add-form" id="expForm">
+          <div class="form-grid">
+            <div class="form-group"><label>Job Title *</label><input type="text" id="exp_title" /></div>
+            <div class="form-group"><label>Company *</label><input type="text" id="exp_company" /></div>
+            <div class="form-group"><label>Start Date *</label><input type="date" id="exp_start" /></div>
+            <div class="form-group"><label>End Date (blank = current)</label><input type="date" id="exp_end" /></div>
+            <div class="form-group span2"><label>Description</label><textarea id="exp_desc" rows="3"></textarea></div>
+          </div>
+          <div class="section-footer">
+            <button class="btn btn-ghost btn-sm" onclick="toggleForm('expForm')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="addExperience()">Add</button>
+          </div>
+        </div>
+        <div id="expList"></div>
+      </div>
+    </div>
+
+    <!-- Education -->
+    <div class="tab-pane" id="tab-edu">
+      <div class="card">
+        <div class="card-title">Education <button class="btn btn-primary btn-sm" onclick="toggleForm('eduForm')">+ Add</button></div>
+        <div class="add-form" id="eduForm">
+          <div class="form-grid">
+            <div class="form-group span2"><label>Institution</label><input type="text" id="edu_inst" /></div>
+            <div class="form-group"><label>Degree</label><input type="text" id="edu_degree" /></div>
+            <div class="form-group"><label>Field of Study</label><input type="text" id="edu_field" /></div>
+            <div class="form-group"><label>Start Date</label><input type="date" id="edu_start" /></div>
+            <div class="form-group"><label>End Date</label><input type="date" id="edu_end" /></div>
+          </div>
+          <div class="section-footer">
+            <button class="btn btn-ghost btn-sm" onclick="toggleForm('eduForm')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="addEducation()">Add</button>
+          </div>
+        </div>
+        <div id="eduList"></div>
+      </div>
+    </div>
+
+    <!-- Certificates -->
+    <div class="tab-pane" id="tab-certs">
+      <div class="card">
+        <div class="card-title">Certificates <button class="btn btn-primary btn-sm" onclick="toggleForm('certForm')">+ Add</button></div>
+        <div class="add-form" id="certForm">
+          <div class="form-grid">
+            <div class="form-group"><label>Certificate Name *</label><input type="text" id="cert_name" /></div>
+            <div class="form-group"><label>Issuer *</label><input type="text" id="cert_issuer" /></div>
+            <div class="form-group"><label>Issue Date</label><input type="date" id="cert_date" /></div>
+            <div class="form-group"><label>Credential URL</label><input type="url" id="cert_url" /></div>
+          </div>
+          <div class="section-footer">
+            <button class="btn btn-ghost btn-sm" onclick="toggleForm('certForm')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="addCertificate()">Add</button>
+          </div>
+        </div>
+        <div id="certList"></div>
+      </div>
+    </div>
+
+    <!-- Skills -->
+    <div class="tab-pane" id="tab-skills">
+      <div class="card">
+        <div class="card-title">Skills <button class="btn btn-primary btn-sm" onclick="toggleForm('skillForm')">+ Add</button></div>
+        <div class="add-form" id="skillForm">
+          <div class="form-grid">
+            <div class="form-group"><label>Skill Name *</label><input type="text" id="skill_name" /></div>
+            <div class="form-group"><label>Category</label><input type="text" id="skill_category" placeholder="e.g. Programming, Design" /></div>
+          </div>
+          <div class="section-footer">
+            <button class="btn btn-ghost btn-sm" onclick="toggleForm('skillForm')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="addSkill()">Add</button>
+          </div>
+        </div>
+        <div id="skillList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/dev/_shared.js"></script>
+  <script>
+    initPage('profile');
+
+    let profileData = {};
+    let langs = [];
+
+    // ── Language tags ──────────────────────────────────────────────────────────
+    function renderLangTags() {
+      const box = document.getElementById('langBox');
+      box.querySelectorAll('.tag').forEach(t => t.remove());
+      langs.forEach((lang, i) => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.innerHTML = `${lang} <span class="tag-remove" onclick="removeLang(${i})">×</span>`;
+        box.insertBefore(span, document.getElementById('langInput'));
+      });
+    }
+    function addLang(e) {
+      if (e.key !== 'Enter' && e.key !== ',') return;
+      e.preventDefault();
+      const val = document.getElementById('langInput').value.replace(',', '').trim();
+      if (val && !langs.includes(val)) { langs.push(val); renderLangTags(); }
+      document.getElementById('langInput').value = '';
+    }
+    function removeLang(i) { langs.splice(i, 1); renderLangTags(); }
+
+    // ── Profile ────────────────────────────────────────────────────────────────
+    function renderProfileView() {
+      document.getElementById('v_name').textContent = profileData.full_name || '—';
+      document.getElementById('v_location').textContent = profileData.location || '—';
+      document.getElementById('v_phone').textContent = profileData.phone || '—';
+      document.getElementById('v_bio').textContent = profileData.bio || '—';
+      const li = profileData.linkedin_url;
+      document.getElementById('v_linkedin').innerHTML = li
+        ? `<a href="${li}" target="_blank" style="color:#4f46e5">${li}</a>` : '—';
+      const langsEl = document.getElementById('v_langs');
+      const pl = profileData.languages || [];
+      langsEl.innerHTML = pl.length ? pl.map(l => `<span class="tag">${l}</span>`).join('') : '<span style="color:#94a3b8">—</span>';
+    }
+
+    async function loadProfile() {
+      const res = await api('/profile/me');
+      if (!res || !res.ok) return;
+      profileData = await res.json();
+      renderProfileView();
+    }
+
+    function toggleEdit() {
+      const isOpen = document.getElementById('profileForm').style.display !== 'none';
+      if (!isOpen) {
+        document.getElementById('e_name').value = profileData.full_name || '';
+        document.getElementById('e_location').value = profileData.location || '';
+        document.getElementById('e_phone').value = profileData.phone || '';
+        document.getElementById('e_linkedin').value = profileData.linkedin_url || '';
+        document.getElementById('e_bio').value = profileData.bio || '';
+        langs = [...(profileData.languages || [])];
+        renderLangTags();
+      }
+      document.getElementById('profileForm').style.display = isOpen ? 'none' : 'block';
+      document.getElementById('profileView').style.display = isOpen ? '' : 'none';
+      document.getElementById('editToggleBtn').textContent = isOpen ? 'Edit' : 'Cancel';
+    }
+
+    async function saveProfile() {
+      const payload = {};
+      const map = { e_name: 'full_name', e_location: 'location', e_phone: 'phone', e_linkedin: 'linkedin_url', e_bio: 'bio' };
+      Object.entries(map).forEach(([id, key]) => {
+        const v = document.getElementById(id).value.trim();
+        if (v) payload[key] = v;
+      });
+      if (langs.length) payload.languages = langs;
+      const res = await api('/profile/me', { method: 'PATCH', body: JSON.stringify(payload) });
+      if (!res || !res.ok) { showAlert('profileErr', 'Failed to save'); return; }
+      await loadProfile();
+      showAlert('profileOk', 'Saved successfully', 'success');
+      setTimeout(toggleEdit, 600);
+    }
+
+    // ── Experience ─────────────────────────────────────────────────────────────
+    async function loadExperiences() {
+      const res = await api('/profile/me/experiences');
+      if (!res || !res.ok) return;
+      const { items = [] } = await res.json();
+      const el = document.getElementById('expList');
+      if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">💼</div>No experience added yet</div>'; return; }
+      el.innerHTML = items.map(e => `
+        <div class="item-row">
+          <div class="item-content">
+            <div class="item-title">${e.job_title || 'Untitled'} · <span style="font-weight:400">${e.company || ''}</span></div>
+            <div class="item-meta">${fmt(e.start_date)} — ${e.end_date ? fmt(e.end_date) : 'Present'}</div>
+            ${e.description ? `<div class="item-subtitle" style="margin-top:4px">${e.description}</div>` : ''}
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('/profile/me/experiences/${e.id}', loadExperiences)">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function addExperience() {
+      const t = document.getElementById('exp_title').value.trim();
+      const c = document.getElementById('exp_company').value.trim();
+      const s = document.getElementById('exp_start').value;
+      if (!t || !c || !s) return alert('Job title, company, and start date are required');
+      const payload = { job_title: t, company: c, start_date: s,
+        end_date: document.getElementById('exp_end').value || null,
+        description: document.getElementById('exp_desc').value.trim() || null };
+      const res = await api('/profile/me/experiences', { method: 'POST', body: JSON.stringify(payload) });
+      if (!res || !res.ok) return alert('Failed to add experience');
+      ['exp_title','exp_company','exp_start','exp_end','exp_desc'].forEach(id => document.getElementById(id).value = '');
+      toggleForm('expForm'); loadExperiences();
+    }
+
+    // ── Education ──────────────────────────────────────────────────────────────
+    async function loadEducation() {
+      const res = await api('/profile/me/education');
+      if (!res || !res.ok) return;
+      const { items = [] } = await res.json();
+      const el = document.getElementById('eduList');
+      if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🎓</div>No education added yet</div>'; return; }
+      el.innerHTML = items.map(e => `
+        <div class="item-row">
+          <div class="item-content">
+            <div class="item-title">${[e.degree, e.field_of_study].filter(Boolean).join(' · ') || 'Untitled'}</div>
+            <div class="item-subtitle">${e.institution || '—'}</div>
+            <div class="item-meta">${fmt(e.start_date)} — ${e.end_date ? fmt(e.end_date) : 'Present'}</div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('/profile/me/education/${e.id}', loadEducation)">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function addEducation() {
+      const payload = {
+        institution: document.getElementById('edu_inst').value.trim() || null,
+        degree: document.getElementById('edu_degree').value.trim() || null,
+        field_of_study: document.getElementById('edu_field').value.trim() || null,
+        start_date: document.getElementById('edu_start').value || null,
+        end_date: document.getElementById('edu_end').value || null,
+      };
+      const res = await api('/profile/me/education', { method: 'POST', body: JSON.stringify(payload) });
+      if (!res || !res.ok) return alert('Failed to add education');
+      ['edu_inst','edu_degree','edu_field','edu_start','edu_end'].forEach(id => document.getElementById(id).value = '');
+      toggleForm('eduForm'); loadEducation();
+    }
+
+    // ── Certificates ───────────────────────────────────────────────────────────
+    async function loadCertificates() {
+      const res = await api('/profile/me/certificates');
+      if (!res || !res.ok) return;
+      const { items = [] } = await res.json();
+      const el = document.getElementById('certList');
+      if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏆</div>No certificates added yet</div>'; return; }
+      el.innerHTML = items.map(c => `
+        <div class="item-row">
+          <div class="item-content">
+            <div class="item-title">
+              ${c.certificate_name || 'Untitled'}
+              ${c.is_verified
+                ? '<span class="badge badge-green" style="margin-left:6px">✓ Verified</span>'
+                : '<span class="badge badge-grey" style="margin-left:6px">Not Verified</span>'}
+            </div>
+            <div class="item-subtitle">${c.issuer || ''}</div>
+            <div class="item-meta">
+              ${c.issue_date ? 'Issued ' + fmt(c.issue_date) : ''}
+              ${c.credential_url ? ` · <a href="${c.credential_url}" target="_blank" style="color:#4f46e5">View credential</a>` : ''}
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('/profile/me/certificates/${c.id}', loadCertificates)">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function addCertificate() {
+      const n = document.getElementById('cert_name').value.trim();
+      const i = document.getElementById('cert_issuer').value.trim();
+      if (!n || !i) return alert('Name and issuer are required');
+      const payload = { certificate_name: n, issuer: i,
+        issue_date: document.getElementById('cert_date').value || null,
+        credential_url: document.getElementById('cert_url').value.trim() || null };
+      const res = await api('/profile/me/certificates', { method: 'POST', body: JSON.stringify(payload) });
+      if (!res || !res.ok) return alert('Failed to add certificate');
+      ['cert_name','cert_issuer','cert_date','cert_url'].forEach(id => document.getElementById(id).value = '');
+      toggleForm('certForm'); loadCertificates();
+    }
+
+    // ── Skills ─────────────────────────────────────────────────────────────────
+    async function loadSkills() {
+      const res = await api('/profile/me/skills');
+      if (!res || !res.ok) return;
+      const { items = [] } = await res.json();
+      const el = document.getElementById('skillList');
+      if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">⚡</div>No skills added yet</div>'; return; }
+      el.innerHTML = items.map(s => `
+        <div class="item-row">
+          <div class="item-content">
+            <div class="item-title">
+              ${s.custom_skill_name || s.skill_name || 'Skill #' + s.id}
+              ${s.is_verified ? '<span class="badge badge-yellow" style="margin-left:6px">★ Assessed</span>' : ''}
+            </div>
+            ${s.category ? `<div class="item-meta">${s.category}</div>` : ''}
+            ${s.score != null ? `<div class="item-meta">Assessment score: <strong>${s.score}%</strong></div>` : ''}
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('/profile/me/skills/${s.id}', loadSkills)">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function addSkill() {
+      const name = document.getElementById('skill_name').value.trim();
+      if (!name) return alert('Skill name is required');
+      const payload = { custom_skill_name: name };
+      const cat = document.getElementById('skill_category').value.trim();
+      if (cat) payload.category = cat;
+      const res = await api('/profile/me/skills', { method: 'POST', body: JSON.stringify(payload) });
+      if (!res || !res.ok) return alert('Failed to add skill');
+      document.getElementById('skill_name').value = '';
+      document.getElementById('skill_category').value = '';
+      toggleForm('skillForm'); loadSkills();
+    }
+
+    // ── Generic delete ─────────────────────────────────────────────────────────
+    async function deleteItem(path, reload) {
+      if (!confirm('Delete this item?')) return;
+      const res = await api(path, { method: 'DELETE' });
+      if (!res) return;
+      reload();
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+    loadProfile();
+    loadExperiences();
+    loadEducation();
+    loadCertificates();
+    loadSkills();
+  </script>
+</body>
+</html>
