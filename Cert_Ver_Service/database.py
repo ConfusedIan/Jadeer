@@ -1,7 +1,8 @@
 import os
 import enum
 from datetime import datetime
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import (create_engine, text, Column, String, Text, DateTime, Enum, ForeignKey)
 from dotenv import load_dotenv

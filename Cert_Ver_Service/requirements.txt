@@ -1,9 +1,9 @@
 fastapi==0.111.0
 uvicorn==0.29.0
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 httpx==0.27.0
-pydantic==2.7.1
+pydantic==1.10.26
 python-dotenv==1.0.1
 selenium==4.20.0
 webdriver-manager==4.0.1
-sqlalchemy.orm
+SQLAlchemy
