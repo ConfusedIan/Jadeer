@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Candidate Ranking — Jadeer</title>
+  <style>
+    .candidate-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      background: white;
+      margin-bottom: 12px;
+    }
+    .candidate-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .candidate-name { font-size: 15px; font-weight: 700; color: #1e293b; }
+    .candidate-meta { font-size: 13px; color: #64748b; margin-top: 3px; }
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 52px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .score-high { background: #dcfce7; color: #16a34a; }
+    .score-mid  { background: #fefce8; color: #ca8a04; }
+    .score-low  { background: #fef2f2; color: #dc2626; }
+    .skill-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .skill-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 6px;
+      font-size: 12px; font-weight: 500;
+      background: #eef2ff; color: #4f46e5;
+    }
+    .skill-score { font-weight: 700; }
+    .section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 6px;
+    }
+    .skill-filter-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .skill-filter-row input[type=text] { flex: 2; }
+    .skill-filter-row input[type=number] { flex: 1; }
+    .remove-skill-btn {
+      background: none; border: none; cursor: pointer;
+      color: #94a3b8; font-size: 16px; padding: 0 4px; line-height: 1;
+    }
+    .remove-skill-btn:hover { color: #dc2626; }
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .results-count { font-size: 13px; color: #64748b; }
+    .exp-entry { font-size: 13px; color: #475569; margin-bottom: 3px; }
+    .edu-entry { font-size: 13px; color: #475569; margin-bottom: 3px; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">Candidate Ranking</div>
+      <div class="page-subtitle">Search and rank candidates by skills, experience, and education</div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+      <div class="card-title">Search Filters</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Major / Field of Study *</label>
+          <input type="text" id="fMajor" placeholder="e.g. Computer Science" />
+        </div>
+        <div class="form-group">
+          <label>Graduation Year <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+          <input type="number" id="fGradYear" placeholder="e.g. 2023" min="1990" max="2030" />
+        </div>
+        <div class="form-group">
+          <label>Location *</label>
+          <input type="text" id="fLocation" placeholder="e.g. Riyadh" />
+        </div>
+        <div class="form-group">
+          <label>Min. Years of Experience *</label>
+          <input type="number" id="fMinExp" placeholder="e.g. 2" min="0" step="0.5" />
+        </div>
+        <div class="form-group">
+          <label>Max Results</label>
+          <input type="number" id="fLimit" value="20" min="1" max="100" />
+        </div>
+        <div class="form-group">
+          <label>Sort By</label>
+          <select id="fSortBy">
+            <option value="score">Skill Score</option>
+            <option value="years_experience">Years of Experience</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sort Order</label>
+          <select id="fSortOrder">
+            <option value="desc">Highest First</option>
+            <option value="asc">Lowest First</option>
+          </select>
+        </div>
+        <div class="form-group span2">
+          <label>Soft Skills & Minimum Scores *</label>
+          <div id="softSkillList"></div>
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addSkillRow('soft')">+ Add Soft Skill</button>
+        </div>
+        <div class="form-group span2">
+          <label>Tech Skills * <span style="font-weight:400;color:#94a3b8">(presence check only)</span></label>
+          <div id="techSkillList"></div>
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addTechSkillRow()">+ Add Tech Skill</button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="searchBtn" onclick="search()">Search Candidates</button>
+        <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+      </div>
+      <div class="alert alert-error" id="searchErr"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsSection" style="display:none">
+      <div class="results-header">
+        <div class="page-title" style="font-size:16px">Results</div>
+        <div class="results-count" id="resultsCount"></div>
+      </div>
+      <div id="resultsList"></div>
+    </div>
+
+    <div id="emptyState" style="display:none">
+      <div class="card">
+        <div class="empty">
+          <div class="empty-icon">🔍</div>
+          No candidates matched your filters. Try relaxing the criteria.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/dev/_shared.js"></script>
+  <script>
+    initPage('ranking');
+
+    let skillRowCount = 0;
+
+    function addSkillRow(type, name = '', minScore = '') {
+      const id = skillRowCount++;
+      const listId = type === 'soft' ? 'softSkillList' : 'techSkillList';
+      const placeholder = type === 'soft' ? 'e.g. Problem Solving' : 'e.g. Python';
+      const row = document.createElement('div');
+      row.className = 'skill-filter-row';
+      row.id = `skill-row-${id}`;
+      row.innerHTML = `
+        <input type="text" placeholder="Skill name (${placeholder})" value="${name}" data-skill-name />
+        <input type="number" placeholder="Min score (0–100)" value="${minScore}" min="0" max="100" data-skill-score />
+        <button type="button" class="remove-skill-btn" onclick="document.getElementById('skill-row-${id}').remove()">×</button>
+      `;
+      document.getElementById(listId).appendChild(row);
+    }
+
+    function collectSkills(listId) {
+      const result = [];
+      document.querySelectorAll(`#${listId} .skill-filter-row`).forEach(row => {
+        const name = row.querySelector('[data-skill-name]').value.trim();
+        const score = row.querySelector('[data-skill-score]').value.trim();
+        if (name) result.push({ name, min_score: score ? parseFloat(score) : 0 });
+      });
+      return result;
+    }
+
+    function addTechSkillRow(name = '') {
+      const id = skillRowCount++;
+      const row = document.createElement('div');
+      row.className = 'skill-filter-row';
+      row.id = `skill-row-${id}`;
+      row.innerHTML = `
+        <input type="text" placeholder="e.g. Python" value="${name}" data-tech-skill style="flex:1" />
+        <button type="button" class="remove-skill-btn" onclick="document.getElementById('skill-row-${id}').remove()">×</button>
+      `;
+      document.getElementById('techSkillList').appendChild(row);
+    }
+
+    function collectTechSkills() {
+      const result = [];
+      document.querySelectorAll('#techSkillList [data-tech-skill]').forEach(input => {
+        const name = input.value.trim();
+        if (name) result.push(name);
+      });
+      return result;
+    }
+
+    function clearFilters() {
+      ['fMajor','fLocation','fMinExp','fGradYear'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('fLimit').value = '20';
+      document.getElementById('fSortBy').value = 'score';
+      document.getElementById('fSortOrder').value = 'desc';
+      document.getElementById('softSkillList').innerHTML = '';
+      document.getElementById('techSkillList').innerHTML = '';
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+    }
+
+    async function search() {
+      const btn = document.getElementById('searchBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Searching...';
+      document.getElementById('searchErr').className = 'alert alert-error';
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+
+      const body = {};
+      const major    = document.getElementById('fMajor').value.trim();
+      const location = document.getElementById('fLocation').value.trim();
+      const gradYear = document.getElementById('fGradYear').value.trim();
+      const minExp   = document.getElementById('fMinExp').value.trim();
+      const limit    = parseInt(document.getElementById('fLimit').value) || 20;
+
+      if (major)    body.major = major;
+      if (location) body.location = location;
+      if (gradYear) body.graduation_year = parseInt(gradYear);
+      if (minExp)   body.min_years_experience = parseFloat(minExp);
+      const softSkills = collectSkills('softSkillList');
+      const techSkills = collectTechSkills();
+      if (softSkills.length) body.soft_skills = softSkills;
+      if (techSkills.length) body.tech_skills = techSkills;
+      body.sort_by    = document.getElementById('fSortBy').value;
+      body.sort_order = document.getElementById('fSortOrder').value;
+      body.limit = limit;
+
+      try {
+        const res = await api('/ranking/search', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        if (!res || !res.ok) {
+          const err = await res?.json().catch(() => ({}));
+          showAlert('searchErr', err.detail || err.error || 'Search failed');
+          return;
+        }
+        const data = await res.json();
+        renderResults(data.results || [], data.count || 0);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Search Candidates';
+      }
+    }
+
+    function scoreClass(score) {
+      if (score >= 70) return 'score-high';
+      if (score >= 40) return 'score-mid';
+      return 'score-low';
+    }
+
+    function renderResults(results, count) {
+      if (!results.length) {
+        document.getElementById('emptyState').style.display = '';
+        return;
+      }
+
+      document.getElementById('resultsCount').textContent = `${count} candidate${count !== 1 ? 's' : ''} found`;
+
+      const list = document.getElementById('resultsList');
+      list.innerHTML = results.map((c, idx) => {
+        const p = c.profile || {};
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown';
+        const email = c.email ? `<span style="font-size:12px;color:#94a3b8;margin-left:8px">${c.email}</span>` : '';
+        const location = p.location ? `📍 ${p.location}` : '';
+        const score = typeof c.score === 'number' ? c.score.toFixed(1) : '—';
+        const cls = typeof c.score === 'number' ? scoreClass(c.score) : 'score-low';
+
+        // Skills
+        const skillMap = c.skill_map || {};
+        const skillHtml = Object.entries(skillMap).length
+          ? `<div class="section-label" style="margin-top:12px">Skills</div>
+             <div class="skill-chips">${Object.entries(skillMap).map(([name, score]) =>
+               `<span class="skill-chip">${name} <span class="skill-score">${score != null ? score.toFixed(0) : '—'}</span></span>`
+             ).join('')}</div>`
+          : '';
+
+        // Experience
+        const exps = c.experiences || [];
+        const expHtml = exps.length
+          ? `<div class="section-label" style="margin-top:12px">Experience</div>
+             ${exps.slice(0,2).map(e =>
+               `<div class="exp-entry">💼 ${e.title || ''} at ${e.company || ''} ${e.start_date ? '('+fmt(e.start_date)+' – '+(e.end_date ? fmt(e.end_date) : 'Present')+')' : ''}</div>`
+             ).join('')}${exps.length > 2 ? `<div class="exp-entry" style="color:#94a3b8">+${exps.length-2} more</div>` : ''}`
+          : '';
+
+        // Education
+        const edus = c.education || [];
+        const eduHtml = edus.length
+          ? `<div class="section-label" style="margin-top:12px">Education</div>
+             ${edus.slice(0,1).map(e =>
+               `<div class="edu-entry">🎓 ${e.degree || ''} in ${e.field_of_study || ''} — ${e.institution || ''} ${e.graduation_year ? '('+e.graduation_year+')' : ''}</div>`
+             ).join('')}`
+          : '';
+
+        return `
+          <div class="candidate-card">
+            <div class="candidate-header">
+              <div>
+                <div class="candidate-name">#${idx+1} ${name}${email}</div>
+                <div class="candidate-meta">${location}</div>
+              </div>
+              <div class="score-pill ${cls}">${score}</div>
+            </div>
+            ${skillHtml}${expHtml}${eduHtml}
+          </div>`;
+      }).join('');
+
+      document.getElementById('resultsSection').style.display = '';
+    }
+  </script>
+</body>
+</html>

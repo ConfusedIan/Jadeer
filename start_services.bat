@@ -20,6 +20,9 @@ start cmd /k "cd Recommendation_Service && python -m uvicorn main:app --reload -
 echo Starting Certificates Service...
 start cmd /k "cd Cert_Ver_Service && python -m uvicorn main:app --reload --port 5006"
 
+echo Starting Ranking Service...
+start cmd /k "cd Ranking_Service && python -m uvicorn main:app --reload --port 5007"
+
 echo.
 echo Opening Swagger...
 timeout /t 4 /nobreak >nul

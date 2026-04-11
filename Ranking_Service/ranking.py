@@ -1,32 +1,13 @@
-"""
-Ranking logic for the Jadeer Ranking Service.
-
-The employer provides a set of search filters. Filters that are present act as
-HARD filters (a candidate that fails any of them is excluded). Candidates who
-pass all filters are then RANKED by how well they match the requested skills.
-
-There are no fixed weights/percentages: the score is derived directly from the
-employer's own criteria, against the candidate profiles that exist on the
-platform.
-"""
 from __future__ import annotations
-
 from datetime import date
-from typing import Any, Iterable
+from typing import Any
 
 
 def _norm(value: Any) -> str:
-    """Lowercase + strip for case-insensitive comparison. Safe on None."""
-    if value is None:
-        return ""
-    return str(value).strip().lower()
+    return "" if value is None else str(value).strip().lower()
 
 
 def _years_of_experience(experiences: list[dict]) -> float:
-    """
-    Estimate total years of experience by summing the duration of each
-    experience entry. Ongoing experiences (no end_date) count up to today.
-    """
     total_days = 0
     today = date.today()
     for exp in experiences or []:
@@ -43,8 +24,7 @@ def _years_of_experience(experiences: list[dict]) -> float:
 
 
 def _graduation_year(education: list[dict]) -> int | None:
-    """Latest end_date year across the candidate's education entries."""
-    years: list[int] = []
+    years = []
     for edu in education or []:
         end = edu.get("end_date")
         if not end:
@@ -57,9 +37,7 @@ def _graduation_year(education: list[dict]) -> int | None:
 
 
 def _major(education: list[dict]) -> str:
-    """Take the field of study from the most recent education entry."""
-    latest_year = -1
-    latest_major = ""
+    latest_year, latest_major = -1, ""
     for edu in education or []:
         field = edu.get("field_of_study") or ""
         end = edu.get("end_date")
@@ -68,39 +46,19 @@ def _major(education: list[dict]) -> str:
         except (ValueError, TypeError):
             year = 0
         if field and year >= latest_year:
-            latest_year = year
-            latest_major = field
+            latest_year, latest_major = year, field
     return latest_major
 
 
-def resolve_skill_name(skill_row: dict, standard_skill_names: dict[int, str]) -> str:
-    """
-    Get the display name for a skill row.
-
-    A row in the `skills` table is either:
-      - a custom skill (custom_skill_name set, skill_id null), or
-      - a standard skill (skill_id set, name lives in `standard_skills`).
-    """
-    custom = skill_row.get("custom_skill_name")
-    if custom:
-        return custom
-    sid = skill_row.get("skill_id")
-    if sid is not None:
-        return standard_skill_names.get(int(sid), "")
-    return ""
+def _strip(rows: list[dict]) -> list[dict]:
+    return [{k: v for k, v in row.items() if k != "candidate_id"} for row in rows]
 
 
-def build_skill_lookup(
-    skills: list[dict], standard_skill_names: dict[int, str]
-) -> dict[str, dict]:
-    """
-    Build a {lowercased_name: skill_row} map. The resolved name is also
-    injected into each row as `_resolved_name` so downstream code (e.g. the
-    candidate card) can render it without re-resolving.
-    """
+def build_skill_lookup(skills: list[dict], standard_skill_names: dict[int, str]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for s in skills or []:
-        name = resolve_skill_name(s, standard_skill_names)
+        sid = s.get("skill_id")
+        name = (standard_skill_names.get(int(sid)) if sid else None) or s.get("custom_skill_name", "")
         if not name:
             continue
         s["_resolved_name"] = name
@@ -115,81 +73,45 @@ def passes_hard_filters(
     skill_map: dict[str, dict],
     filters: dict,
 ) -> bool:
-    """Return True only if the candidate satisfies every filter the employer set."""
-
-    # Major (matched against the candidate's most recent field_of_study)
-    required_major = _norm(filters.get("major"))
-    if required_major and required_major not in _norm(_major(education)):
+    if (major := _norm(filters.get("major"))) and major not in _norm(_major(education)):
         return False
 
-    # Graduation year (exact match — matches the dropdown in the employer UI)
-    required_grad = filters.get("graduation_year")
-    if required_grad is not None:
-        cand_grad = _graduation_year(education)
-        if cand_grad != int(required_grad):
+    if (grad := filters.get("graduation_year")) is not None and _graduation_year(education) != int(grad):
+        return False
+
+    if (loc := _norm(filters.get("location"))) and loc not in _norm(candidate.get("location")):
+        return False
+
+    if (min_exp := filters.get("min_years_experience")) is not None:
+        if _years_of_experience(experiences) < float(min_exp):
             return False
 
-    # Location (substring match so "Riyadh" matches "Riyadh, Saudi Arabia")
-    required_location = _norm(filters.get("location"))
-    if required_location:
-        cand_location = _norm(candidate.get("location"))
-        if required_location not in cand_location:
+    for sf in (filters.get("soft_skills") or []):
+        row = skill_map.get(_norm(sf["name"]))
+        if not row or row.get("score") is None or float(row["score"]) < float(sf.get("min_score", 0)):
             return False
 
-    # Minimum years of experience
-    min_years = filters.get("min_years_experience")
-    if min_years is not None:
-        if _years_of_experience(experiences) < float(min_years):
-            return False
-
-    # Required skills + minimum skill score
-    required_skills: Iterable[str] = filters.get("skills") or []
-    min_skill_score = float(filters.get("min_skill_score") or 0)
-    for skill_name in required_skills:
-        row = skill_map.get(_norm(skill_name))
-        if not row:
-            return False  # candidate doesn't have this skill at all
-        score = row.get("score")
-        if score is None or float(score) < min_skill_score:
+    for skill_name in (filters.get("tech_skills") or []):
+        if not skill_map.get(_norm(skill_name)):
             return False
 
     return True
 
 
-def score_candidate(
-    candidate: dict,
-    experiences: list[dict],
-    education: list[dict],
-    skill_map: dict[str, dict],
-    filters: dict,
-) -> float:
-    """
-    Score = average assessment score across the requested skills.
+def score_candidate(skill_map: dict[str, dict], filters: dict) -> float:
+    """Average of the requested soft skill scores as stored — no recalculation."""
+    soft_skills = filters.get("soft_skills") or []
 
-    If the employer didn't request any specific skills, the score is the
-    candidate's overall average skill score (so the most-assessed candidates
-    surface naturally). The score is bounded to [0, 100] and rounded to one
-    decimal so it lines up with the UI badges.
-    """
-    requested = [s for s in (filters.get("skills") or []) if s]
+    if soft_skills:
+        scores = [
+            float(skill_map[key]["score"])
+            for sf in soft_skills
+            if (key := _norm(sf["name"])) in skill_map and skill_map[key].get("score") is not None
+        ]
+    else:
+        scores = [float(s["score"]) for s in skill_map.values() if s.get("score") is not None]
 
-    if requested:
-        scores = []
-        for name in requested:
-            row = skill_map.get(_norm(name))
-            if row and row.get("score") is not None:
-                scores.append(float(row["score"]))
-        if not scores:
-            return 0.0
-        return round(sum(scores) / len(scores), 1)
-
-    all_scores = [
-        float(s["score"]) for s in skill_map.values()
-        if s.get("score") is not None
-    ]
-    if not all_scores:
-        return 0.0
-    return round(sum(all_scores) / len(all_scores), 1)
+    return round(sum(scores) / len(scores), 1) if scores else 0.0
 
 
 def build_candidate_card(
@@ -197,31 +119,43 @@ def build_candidate_card(
     experiences: list[dict],
     education: list[dict],
     skill_map: dict[str, dict],
+    certificates: list[dict],
     score: float,
+    filters: dict,
     email: str | None = None,
 ) -> dict:
-    """Shape the response so the employer search UI can render it directly."""
+    # Split skills into what the employer filtered on vs everything else
+    requested_names = (
+        {_norm(sf["name"]) for sf in (filters.get("soft_skills") or [])} |
+        {_norm(n)          for n  in (filters.get("tech_skills")  or [])}
+    )
+
+    requested_skills = []
+    other_skills = []
+    for key, s in skill_map.items():
+        entry = {
+            "name":        s.get("_resolved_name"),
+            "score":       s.get("score"),
+            "category":    s.get("category"),
+            "is_verified": bool(s.get("is_verified", False)),
+        }
+        (requested_skills if key in requested_names else other_skills).append(entry)
+
     return {
-        "candidate_id": candidate.get("id"),
-        "full_name": candidate.get("full_name"),
-        # The schema has no `headline` column — use bio as the tagline.
-        "headline": candidate.get("bio"),
-        "location": candidate.get("location"),
-        # Email is fetched from auth.users by the caller (after ranking),
-        # since the public `profiles` table doesn't store it.
-        "email": email,
-        "phone": candidate.get("phone"),
-        "linkedin_url": candidate.get("linkedin_url"),
-        "major": _major(education),
-        "graduation_year": _graduation_year(education),
-        "years_of_experience": _years_of_experience(experiences),
-        "skills": [
-            {
-                "name": s.get("_resolved_name"),
-                "score": s.get("score"),
-                "is_verified": bool(s.get("is_verified", False)),
-            }
-            for s in skill_map.values()
-        ],
-        "score": score,
+        # Computed fields
+        "avg_soft_skill_score": score,
+        "years_of_experience":  _years_of_experience(experiences),
+        "major":                _major(education),
+        "graduation_year":      _graduation_year(education),
+        "email":                email,
+
+        # Skills split into filtered vs others
+        "requested_skills": requested_skills,
+        "other_skills":     other_skills,
+
+        # Everything else — raw from DB, all columns included
+        "profile":       candidate,
+        "experiences":   _strip(experiences),
+        "education":     _strip(education),
+        "certificates":  _strip(certificates),
     }

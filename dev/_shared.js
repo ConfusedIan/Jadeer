@@ -306,6 +306,7 @@ function initPage(active) {
       <div class="nav-section-label">Tools</div>
       <a href="/dev/recommendation.html" class="nav-item ${active === 'rec' ? 'active' : ''}">💡 Recommendations</a>
       <a href="/dev/assessment.html" class="nav-item ${active === 'assess' ? 'active' : ''}">✅ Assessment</a>
+      <a href="/dev/ranking.html" class="nav-item ${active === 'ranking' ? 'active' : ''}">🔍 Candidate Ranking</a>
     </div>
     <div class="nav-spacer"></div>
     <button class="logout-btn" onclick="logout()">Sign Out</button>
