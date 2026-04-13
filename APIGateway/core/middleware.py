@@ -15,6 +15,9 @@ async def log_requests(request: Request, call_next):
 PUBLIC_PATH_PREFIXES = ("/docs", "/openapi.json", "/redoc", "/health", "/status", "/dev")
 
 async def auth_guard(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    
     path = request.url.path
     if path.startswith(PUBLIC_PATH_PREFIXES):
         return await call_next(request)
