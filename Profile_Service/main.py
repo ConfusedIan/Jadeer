@@ -281,6 +281,12 @@ def delete_certificate(cert_id: str, x_user_id: str = Header(default=None, alias
         raise HTTPException(status_code=404, detail="Certificate not found")
     return {"deleted": True}
 
+@app.get("/profile/skills-catalog", tags=["skills"])
+def list_standard_skills():
+    """Return the standardized skills catalog with IDs."""
+    res = supabase.table("standard_skills").select("*").execute()
+    return {"items": res.data or []}
+
 @app.get("/profile/me/skills", tags=["skills"])
 def list_my_skills(
     x_user_id: str = Header(default=None, alias="X-User-Id"),

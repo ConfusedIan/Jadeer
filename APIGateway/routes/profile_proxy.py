@@ -197,3 +197,12 @@ async def delete_skill(row_id: str, request: Request):
         body=None,
         extra_headers=_user_header(request),
     )
+
+@router.get("/skills-catalog")
+async def get_skills_catalog(request: Request):
+    return forward_request(
+        request,
+        f"{SERVICES['profile']}/profile/skills-catalog",
+        body=None,
+        extra_headers=_user_header(request),
+    )
