@@ -189,7 +189,7 @@ def save_assessment_result(
             "occupation_title": result_data.get("occupation_title", ""),
             "occupation_code": result_data.get("occupation_code", ""),
             "skill_name": result_data.get("skill_name", ""),
-            "skill_category": result_data.get("skill_category", ""),
+            "skill_category": "Soft", 
             "skill_priority": result_data.get("skill_priority", ""),
             "score": result_data.get("score", 0),
             "total_questions": result_data.get("total_questions", 0),
