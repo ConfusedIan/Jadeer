@@ -28,7 +28,7 @@ class Issuer(Base):
     __tablename__ = "issuers"
     issuer_id        = Column(String, primary_key=True)
     issuer_name      = Column(String, nullable=False)
-    verification_url = Column(String, nullable=False)
+    verification_url = Column(String, nullable=True, default="")
 
 
 class Certificate(Base):

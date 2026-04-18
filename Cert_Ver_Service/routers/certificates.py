@@ -129,6 +129,7 @@ def submit_certificate(
         issuer = Issuer(
             issuer_id=normalized_issuer_id,
             issuer_name=body.issuer_id.strip() if isinstance(body.issuer_id, str) else normalized_issuer_id,
+            verification_url="",   # required by schema; unsupported issuers have no URL
         )
         db.add(issuer)
         db.flush()
