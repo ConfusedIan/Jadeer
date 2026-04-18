@@ -21,29 +21,29 @@ VERIFIERS = {
 
 ISSUER_FIELDS = {
     "edx": {
-        "required": ["certificate_id", "expiration_date"],
-        "optional": ["certificate_name", "issue_date", "first_name", "last_name"],
-        "hint": "Enter your edX certificate ID. Expiration Date is also required in the form.",
+        "required": ["certificate_id"],
+        "optional": ["certificate_name", "issue_date", "expiration_date", "first_name", "last_name"],
+        "hint": "Enter your edX certificate ID (found in your certificate URL after /cert/).",
     },
     "coursera": {
-        "required": ["certificate_id", "expiration_date"],
-        "optional": ["certificate_name", "issue_date", "first_name", "last_name"],
-        "hint": "Enter your Coursera verification code. Expiration Date is also required in the form.",
+        "required": ["certificate_id"],
+        "optional": ["certificate_name", "issue_date", "expiration_date", "first_name", "last_name"],
+        "hint": "Enter your Coursera verification code (found on your certificate page).",
     },
     "udemy": {
-        "required": ["certificate_id", "expiration_date"],
-        "optional": ["certificate_name", "issue_date", "first_name", "last_name"],
-        "hint": "Enter your Udemy certificate number. Expiration Date is also required in the form.",
+        "required": ["certificate_id"],
+        "optional": ["certificate_name", "issue_date", "expiration_date", "first_name", "last_name"],
+        "hint": "Enter your Udemy certificate number (from the certificate URL).",
     },
     "comptia": {
-        "required": ["certificate_id", "expiration_date"],
-        "optional": ["certificate_name", "issue_date", "first_name", "last_name"],
-        "hint": "Enter your CompTIA verification code. Expiration Date is required.",
+        "required": ["certificate_id"],
+        "optional": ["certificate_name", "issue_date", "expiration_date", "first_name", "last_name"],
+        "hint": "Enter your CompTIA certification verification code.",
     },
     "eccouncil": {
-        "required": ["certificate_id", "first_name", "last_name", "expiration_date"],
-        "optional": ["certificate_name", "issue_date"],
-        "hint": "EC-Council requires full name exactly as shown on the certificate. Expiration Date is also required.",
+        "required": ["certificate_id", "first_name", "last_name"],
+        "optional": ["certificate_name", "issue_date", "expiration_date"],
+        "hint": "EC-Council requires full name exactly as shown on the certificate.",
     },
 }
 
