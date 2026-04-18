@@ -49,7 +49,7 @@ ISSUER_FIELDS = {
 
 DEFAULT_ISSUER_FIELDS = {
     "required": ["certificate_id"],
-    "optional": ["certificate_name", "issue_date", "first_name", "last_name"],
+    "optional": ["certificate_name", "issue_date", "expiration_date", "first_name", "last_name"],
     "hint": "Unsupported issuers can still be added and will be saved as Unverified.",
 }
 
