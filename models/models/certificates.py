@@ -14,6 +14,7 @@ class CertificateCreate(BaseModel):
     issuer_id:        Optional[str] = None
     issuer:           Optional[str] = None
     certificate_name: Optional[str] = None
+    status:           Optional[str] = None
     issue_date:       Optional[str] = None
     expiration_date:  Optional[str] = None
     first_name:       Optional[str] = None
