@@ -253,15 +253,20 @@ def add_certificate(payload: CertificateCreate, x_user_id: str = Header(default=
     if "status" not in data or not data["status"]:
         data["status"] = "NOT_FOUND"
 
-    # Preserve free-text issuer in verification_details
-    if data.get("issuer") and data["issuer_id"] == _CUSTOM_ISSUER_SLUG:
-        data["verification_details"] = f"Issuer: {data.pop('issuer', '')}"
+    # Preserve the real custom issuer name instead of overwriting it with `custom`
+    if data["issuer_id"] == _CUSTOM_ISSUER_SLUG:
+        issuer_name = (data.get("issuer") or "").strip()
+        if issuer_name:
+            data["issuer"] = issuer_name
+            if not data.get("verification_details"):
+                data["verification_details"] = f"Manual issuer: {issuer_name}"
+        else:
+            data.pop("issuer", None)
     else:
         data.pop("issuer", None)
 
     # Drop fields not in the certificates table
     data.pop("supported_cert_id", None)
-    data.pop("credential_url", None)
 
     data["candidate_id"] = x_user_id
 
@@ -272,14 +277,49 @@ def add_certificate(payload: CertificateCreate, x_user_id: str = Header(default=
 
     return {"created": True, "data": res.data}
 
+
 @app.put("/profile/me/certificates/{cert_id}", tags=["certificates"])
-def update_certificate(cert_id: str, payload: CertificateUpdate, x_user_id: str = Header(default=None, alias="X-User-Id")):
+def update_certificate(
+    cert_id: str,
+    payload: CertificateUpdate,
+    x_user_id: str = Header(default=None, alias="X-User-Id")
+):
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
     update_data = {k: v for k, v in jsonable_encoder(payload).items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided")
+
+    current_res = (
+        supabase.table("certificates")
+        .select("*")
+        .eq("certificate_id", cert_id)
+        .eq("candidate_id", x_user_id)
+        .maybe_single()
+        .execute()
+    )
+
+    current = current_res.data
+    if not current:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+
+    is_custom = (current.get("issuer_id") or "").strip().lower() == _CUSTOM_ISSUER_SLUG
+
+    # Supported issuers keep their stricter behavior
+    if not is_custom:
+        update_data.pop("issuer", None)
+        update_data.pop("issuer_id", None)
+        update_data.pop("certificate_id", None)
+    else:
+        if "issuer" in update_data:
+            issuer_name = (update_data.get("issuer") or "").strip()
+            if issuer_name:
+                update_data["issuer"] = issuer_name
+                if not update_data.get("verification_details"):
+                    update_data["verification_details"] = f"Manual issuer: {issuer_name}"
+            else:
+                update_data.pop("issuer", None)
 
     res = (
         supabase.table("certificates")
@@ -291,6 +331,7 @@ def update_certificate(cert_id: str, payload: CertificateUpdate, x_user_id: str 
 
     if not res.data:
         raise HTTPException(status_code=404, detail="Certificate not found")
+
     return {"updated": True, "data": res.data}
 
 
