@@ -7,6 +7,9 @@ from fastapi.responses import JSONResponse
 from supabase import create_client, Client
 from fastapi.encoders import jsonable_encoder
 from dotenv import load_dotenv
+import uuid as _uuid 
+
+_CUSTOM_ISSUER_SLUG = "custom"
 
 
 class _JsonFormatter(logging.Formatter):
@@ -236,11 +239,38 @@ def add_certificate(payload: CertificateCreate, x_user_id: str = Header(default=
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
     data = jsonable_encoder(payload)
+
+    # certificate_id is the PRIMARY KEY — auto-generate if not provided
+    if not data.get("certificate_id"):
+        data["certificate_id"] = f"manual-{_uuid.uuid4().hex[:12]}"
+
+    # Resolve issuer_id: supported issuers have it set;
+    # custom issuers fall back to 'custom' sentinel row
+    if not data.get("issuer_id"):
+        data["issuer_id"] = _CUSTOM_ISSUER_SLUG
+
+    # Manual saves default to NOT_FOUND (= Unverified in the UI)
+    if "status" not in data or not data["status"]:
+        data["status"] = "NOT_FOUND"
+
+    # Preserve free-text issuer in verification_details
+    if data.get("issuer") and data["issuer_id"] == _CUSTOM_ISSUER_SLUG:
+        data["verification_details"] = f"Issuer: {data.pop('issuer', '')}"
+    else:
+        data.pop("issuer", None)
+
+    # Drop fields not in the certificates table
+    data.pop("supported_cert_id", None)
+    data.pop("credential_url", None)
+
     data["candidate_id"] = x_user_id
 
-    res = supabase.table("certificates").insert(data).execute()
-    return {"created": True, "data": res.data}
+    try:
+        res = supabase.table("certificates").insert(data).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Insert failed: {str(e)[:200]}")
 
+    return {"created": True, "data": res.data}
 
 @app.put("/profile/me/certificates/{cert_id}", tags=["certificates"])
 def update_certificate(cert_id: str, payload: CertificateUpdate, x_user_id: str = Header(default=None, alias="X-User-Id")):
@@ -254,7 +284,7 @@ def update_certificate(cert_id: str, payload: CertificateUpdate, x_user_id: str 
     res = (
         supabase.table("certificates")
         .update(update_data)
-        .eq("cert_id", cert_id)
+        .eq("certificate_id", cert_id)
         .eq("candidate_id", x_user_id)
         .execute()
     )
@@ -272,7 +302,7 @@ def delete_certificate(cert_id: str, x_user_id: str = Header(default=None, alias
     res = (
         supabase.table("certificates")
         .delete()
-        .eq("cert_id", cert_id)
+        .eq("certificate_id", cert_id)
         .eq("candidate_id", x_user_id)
         .execute()
     )

@@ -10,26 +10,44 @@ def _validate_https_url(v: Optional[str]) -> Optional[str]:
 
 
 class CertificateCreate(BaseModel):
-    supported_cert_id: Optional[int] = None
-    certificate_name: str
-    issuer: str
-    issue_date: Optional[date] = None
-    credential_url: Optional[str] = None
+    certificate_id:   Optional[str] = None
+    issuer_id:        Optional[str] = None
+    issuer:           Optional[str] = None
+    certificate_name: Optional[str] = None
+    issue_date:       Optional[str] = None
+    expiration_date:  Optional[str] = None
+    first_name:       Optional[str] = None
+    last_name:        Optional[str] = None
+    credential_url:   Optional[str] = None
+    pdf_url:          Optional[str] = None
 
     @field_validator("credential_url")
     @classmethod
     def credential_url_must_be_https(cls, v: Optional[str]) -> Optional[str]:
         return _validate_https_url(v)
 
+    @field_validator("pdf_url")
+    @classmethod
+    def pdf_url_must_be_https(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_https_url(v)
+
 
 class CertificateUpdate(BaseModel):
-    supported_cert_id: Optional[int] = None
-    certificate_name: Optional[str] = None
-    issuer: Optional[str] = None
-    issue_date: Optional[date] = None
-    credential_url: Optional[str] = None
+    certificate_name:     Optional[str] = None
+    issue_date:           Optional[str] = None
+    expiration_date:      Optional[str] = None
+    first_name:           Optional[str] = None
+    last_name:            Optional[str] = None
+    credential_url:       Optional[str] = None
+    pdf_url:              Optional[str] = None
+    verification_details: Optional[str] = None
 
     @field_validator("credential_url")
     @classmethod
     def credential_url_must_be_https(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_https_url(v)
+
+    @field_validator("pdf_url")
+    @classmethod
+    def pdf_url_must_be_https(cls, v: Optional[str]) -> Optional[str]:
         return _validate_https_url(v)
