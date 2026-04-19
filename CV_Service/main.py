@@ -4,13 +4,13 @@ import time
 from typing import Dict, Optional
 
 from fastapi import FastAPI, Header, Response, Query, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from clients.profile_client import get_profile_bundle
 from utils.merge import dummy_bundle, merge_real_with_dummy
 from templates.ats_reportlab import generate_cv_pdf
-from utils.cv_history import save_cv, list_cvs, get_cv
+from utils.cv_history import save_cv, list_cvs, get_cv_url, delete_cv
 from config import SUPABASE_URL
 
 
@@ -160,7 +160,6 @@ async def cv_me_pdf_post(
             )
         except Exception as exc:
             logging.getLogger(__name__).warning("Failed to save CV history for %s: %s", x_user_id, exc)
-            raise HTTPException(status_code=500, detail="CV generated but failed to save to history")
 
     return Response(
         content=pdf_bytes,
@@ -200,16 +199,32 @@ async def cv_history_download(
         raise HTTPException(status_code=503, detail="CV history storage is not configured")
 
     try:
-        pdf_bytes = await get_cv(x_user_id, cv_id)
+        url = await get_cv_url(x_user_id, cv_id)
     except Exception as exc:
         logging.getLogger(__name__).warning("CV not found %s/%s: %s", x_user_id, cv_id, exc)
         raise HTTPException(status_code=404, detail="CV not found")
 
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"inline; filename=cv-{cv_id}.pdf"},
-    )
+    return {"download_url": url}
+
+
+@app.delete("/cv/history/{cv_id}", tags=["cv"])
+async def cv_history_delete(
+    cv_id: str,
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+):
+    """Delete a saved CV by ID."""
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Missing X-User-Id")
+    if not SUPABASE_URL:
+        raise HTTPException(status_code=503, detail="CV history storage is not configured")
+
+    try:
+        await delete_cv(x_user_id, cv_id)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Failed to delete CV %s/%s: %s", x_user_id, cv_id, exc)
+        raise HTTPException(status_code=404, detail="CV not found or already deleted")
+
+    return {"deleted": True}
 
 
 # ── Demo ──────────────────────────────────────────────────────────────────────

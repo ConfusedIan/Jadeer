@@ -459,7 +459,7 @@ DIFFICULTY RULES (follow strictly):
 - Skills with Standardized Level < 30: Generate BASIC, straightforward scenarios.
 
 RULES:
-1. Exactly 5 questions total.
+1. Exactly 10 questions total.
 2. Prioritize skills with higher Standardized Importance.
 3. {skill_rule}
 4. Each question MUST be a realistic workplace scenario specific to "{occupation_title}".
@@ -467,6 +467,7 @@ RULES:
 6. Exactly one option is correct.
 7. Include which skill the question targets.
 8. Include a brief explanation of why the correct answer is best.
+9. The correct answer must be randomly distributed across A, B, C, and D (avoid repeating the same position pattern).
 
 CRITICAL: Your response must be ONLY a valid JSON array. Do not include any text before or after the JSON. Do not use markdown code fences. Start your response with [ and end with ].
 Each element must have this exact schema:
@@ -695,7 +696,7 @@ def match_occupation(authorization: str = Header(...)):
 @app.post("/assessment/generate-assessment")
 def api_generate_assessment(req: AssessmentRequest):
     """
-    Generate 5 scenario-based MCQ questions for a given occupation + skill.
+    Generate Ten scenario-based MCQ questions for a given occupation + skill.
     Use the occupation_code from /api/match-occupation response.
     """
     # Validate occupation
