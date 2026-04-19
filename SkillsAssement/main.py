@@ -87,7 +87,7 @@ Each element must have this exact schema:
 """
 
     response = client.chat.completions.create(
-        model="Qwen/Qwen2.5-Coder-7B-fast",
+        model="Qwen/Qwen3.5-397B-A17B",
         messages=[
             {"role": "system", "content": system_prompt},
             {
