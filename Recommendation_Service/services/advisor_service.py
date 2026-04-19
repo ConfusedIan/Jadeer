@@ -127,10 +127,13 @@ Analyze the candidate's profile against the job description and return your reco
                 {"role": "user", "content": user_message},
             ],
             temperature=0.3,
-            max_tokens=1500,
+            max_tokens=8000,
+            extra_body={"enable_thinking": False},
         )
 
-        raw = response.choices[0].message.content or "{}"
+        msg = response.choices[0].message
+        raw = msg.content or getattr(msg, "reasoning_content", None) or "{}"
+        logger.info("LLM raw response (first 200 chars): %s", raw[:200])
         # Strip markdown code fences if the model wraps output
         raw = raw.strip()
         if raw.startswith("```"):

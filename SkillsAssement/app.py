@@ -355,7 +355,7 @@ def match_occupation_from_summary(summary: str) -> str:
     occ_text = "\n".join(f"- {o}" for o in OCC_TITLES)
 
     response = client.chat.completions.create(
-        model="Qwen/Qwen2.5-Coder-7B-fast",
+    model="Qwen/Qwen3.5-397B-A17B",
         messages=[
             {
                 "role": "system",
@@ -489,7 +489,7 @@ Each element must have this exact schema:
     for attempt in range(MAX_RETRIES):
         try:
             response = client.chat.completions.create(
-                model="Qwen/Qwen2.5-Coder-7B-fast",
+                model="Qwen/Qwen3.5-397B-A17B",
                 temperature=0.7,
                 messages=[
                     {"role": "system", "content": system_prompt},

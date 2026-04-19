@@ -50,6 +50,7 @@ Requirements:
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
             max_tokens=150,
+            extra_body={"enable_thinking": False},
         )
         bio = (response.choices[0].message.content or "").strip()
         # Strip any accidental quotes the model might wrap around the text
