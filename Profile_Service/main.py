@@ -262,6 +262,8 @@ def add_certificate(payload: CertificateCreate, x_user_id: str = Header(default=
                 data["verification_details"] = f"Manual issuer: {issuer_name}"
         else:
             data.pop("issuer", None)
+        data.pop("credential_url", None)
+        data.pop("supported_cert_id", None)
     else:
         data.pop("issuer", None)
 
