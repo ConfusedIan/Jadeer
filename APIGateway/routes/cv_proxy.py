@@ -54,6 +54,11 @@ async def cv_history_download(cv_id: str, request: Request):
     return forward_request(request, _target(f"history/{cv_id}"), None, _user_header(request))
 
 
+@router.delete("/history/{cv_id}")
+async def cv_history_delete(cv_id: str, request: Request):
+    return forward_request(request, _target(f"history/{cv_id}"), None, _user_header(request))
+
+
 @router.get("/demo.pdf")
 async def cv_demo_pdf(request: Request):
     return forward_request(request, _target("demo.pdf"), None, _user_header(request))

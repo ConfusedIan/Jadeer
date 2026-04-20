@@ -97,6 +97,8 @@ def generate_cv_pdf(
     y -= 12
 
     meta_parts = []
+    if profile.get("email"):
+        meta_parts.append(profile["email"])
     if profile.get("location"):
         meta_parts.append(profile["location"])
     if profile.get("phone"):
@@ -151,7 +153,14 @@ def generate_cv_pdf(
     # ── Education ────────────────────────────────────────────────────────────
     if include_education and education:
         section("Education")
+        seen_edu = set()
+        deduped_education = []
         for edu in education:
+            key = (edu.get("degree"), edu.get("institution"), edu.get("field_of_study"))
+            if key not in seen_edu:
+                seen_edu.add(key)
+                deduped_education.append(edu)
+        for edu in deduped_education:
             new_page_if_needed(140)
 
             degree = edu.get("degree") or "Degree"
@@ -192,7 +201,7 @@ def generate_cv_pdf(
                 cert_line += f" ({issue_date})"
 
             if include_verified_badges:
-                is_verified = cert.get("is_verified")
+                is_verified = "VERIFIED" in str(cert.get("status", "")).upper()
                 badge_text = "✓ Verified" if is_verified else "○ Not Verified"
                 badge_color = _GREEN if is_verified else _GREY
                 badge_width = stringWidth(badge_text, FONT, 9) + 4
@@ -217,18 +226,13 @@ def generate_cv_pdf(
         section("Skills")
 
         items = []
-        has_assessed = False
         for s in skills:
             name = s.get("custom_skill_name") or s.get("name") or "Skill"
             score = s.get("score")
             if include_scores and score is not None:
                 try:
                     score_int = int(score)
-                    if score_int >= skill_threshold:
-                        items.append(f"{name} ({score_int}/100 \u2605)")
-                        has_assessed = True
-                    else:
-                        items.append(f"{name} ({score_int}/100)")
+                    items.append(f"{name} ({score_int}/100)")
                 except Exception:
                     items.append(name)
             else:
@@ -236,14 +240,6 @@ def generate_cv_pdf(
 
         skills_text = " \u2022 ".join(items)
         y = _wrap_text(c, skills_text, LEFT, y, max_width, FONT, 10, 13)
-
-        if has_assessed:
-            y -= 4
-            c.setFont(FONT, 8)
-            c.setFillColor(_GREY)
-            c.drawString(LEFT, y, "\u2605 = Score verified by platform assessment")
-            c.setFillColor(black)
-            y -= 10
 
     c.showPage()
     c.save()
