@@ -3,6 +3,12 @@
   const { signOut, currentRole } = window.JadeerAuth;
   const { getUser } = window.JadeerAPI;
 
+  function getTheme(){ return document.documentElement.dataset.theme || 'dark'; }
+  function setTheme(t){
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('jadeer-theme', t);
+  }
+
   const CAND_NAV = [
     ['#/dashboard','🏠','Dashboard','dashboard'],
     ['#/profile','👤','nav_profile','Profile'],
@@ -48,6 +54,7 @@
               <div class="title">${title}</div>
             </div>
             <div class="actions">
+              <button class="icon-btn" id="theme-tgl" aria-label="Toggle theme"></button>
               <button class="lang-toggle" id="lang-toggle"><span>🌐</span><span id="lang-label"></span></button>
               <button class="icon-btn" aria-label="Notifications">🔔</button>
               <div class="avatar" style="width:36px;height:36px;font-size:13px" title="${u.full_name||u.email||''}">
@@ -73,6 +80,11 @@
     const setLbl = ()=> ll.textContent = window.JadeerI18n.getLang()==='en'?'عربي':'EN';
     setLbl();
     lt.onclick = ()=>window.JadeerI18n.toggleLang();
+
+    const themeBtn = node.querySelector('#theme-tgl');
+    const syncThemeIcon = ()=>{ themeBtn.textContent = getTheme()==='dark' ? '☀️' : '🌙'; };
+    syncThemeIcon();
+    themeBtn.onclick = ()=>{ setTheme(getTheme()==='dark' ? 'light' : 'dark'); syncThemeIcon(); };
 
     return node;
   }
