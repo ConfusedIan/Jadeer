@@ -24,6 +24,7 @@ ul,ol{list-style:none}
 img,svg{display:block;max-width:100%}
 h1,h2,h3,h4{font-weight:700;line-height:1.25}
 h1{font-size:28px} h2{font-size:22px} h3{font-size:18px} h4{font-size:16px}
+@media(max-width:560px){h1{font-size:22px}h2{font-size:18px}h3{font-size:15px}h4{font-size:14px}}
 .muted{color:var(--text2)}
 .mono{font-family:var(--mono)}
 .hidden{display:none!important}

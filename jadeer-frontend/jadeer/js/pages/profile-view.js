@@ -102,7 +102,7 @@
         </div>
 
         <div class="card">
-          <div class="row" style="gap:20px;align-items:flex-start">
+          <div class="row profile-hero" style="gap:20px;align-items:flex-start">
             <div class="avatar avatar-xl">${initials(fullName)}</div>
             <div style="flex:1;min-width:0">
               <h2>${fullName}</h2>

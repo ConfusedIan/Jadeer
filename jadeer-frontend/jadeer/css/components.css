@@ -142,3 +142,27 @@
   border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .page-loader{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text2)}
+
+/* ===== Mobile ===== */
+@media(max-width:640px){
+  /* Touch-friendly targets */
+  .btn{min-height:44px}
+  .btn-sm{min-height:38px;padding:8px 14px}
+  .btn-lg{min-height:50px}
+  /* Prevent iOS input zoom (font < 16px triggers auto-zoom on Safari) */
+  .input,.select,.textarea{font-size:16px}
+  /* Card padding */
+  .card{padding:16px}
+  .stat{padding:14px 16px}
+  .stat-value{font-size:22px}
+  /* Modal as bottom sheet */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal,.modal-lg{max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0;max-height:92vh}
+  .modal-header{padding:14px 20px}
+  .modal-body{padding:16px 20px}
+  .modal-footer{padding:12px 20px;flex-wrap:wrap;gap:8px}
+  .modal-footer .btn{flex:1;justify-content:center}
+  /* Tabs: scroll horizontally instead of wrapping/clipping */
+  .tabs{flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .tab{flex-shrink:0}
+}

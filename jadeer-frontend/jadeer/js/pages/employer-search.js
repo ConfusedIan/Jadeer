@@ -144,6 +144,15 @@
     .esp-pill.verified { background:rgba(124,92,252,.12); border-color:rgba(124,92,252,.3); color:var(--accent2); }
     .esp-pill.cert { background:var(--success-bg); border-color:rgba(34,211,160,.25); color:var(--success); }
 
+    .esp-card-inner { display: flex; gap: 0; align-items: stretch; }
+    .esp-card-main  { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-inline-end: 16px; }
+    .esp-card-score {
+      flex-shrink: 0; width: 100px;
+      border-inline-start: 1px solid var(--border); padding-inline-start: 16px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: space-between; gap: 10px;
+    }
+
     .esp-empty { text-align:center; padding:60px 24px; color:var(--text3); font-size:14px; }
     .esp-empty-icon { font-size:38px; margin-bottom:12px; opacity:.45; }
     .esp-action-btn {
@@ -175,11 +184,27 @@
     .esp-catalog-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
 
     @media(max-width:768px){
-      .esp-wrap{padding:16px;}
-      .esp-filters-grid{grid-template-columns:1fr 1fr;}
-      .esp-skills-row{grid-template-columns:1fr;}
+      .esp-wrap { padding: 16px; }
+      .esp-filters-grid { grid-template-columns: 1fr 1fr; }
+      .esp-skills-row { grid-template-columns: 1fr; }
+      .esp-field input,.esp-field select,.esp-catalog-input,.esp-catalog-select { font-size: 16px; }
     }
-    @media(max-width:520px){ .esp-filters-grid{grid-template-columns:1fr;} }
+    @media(max-width:520px){
+      .esp-wrap { padding: 12px; }
+      .esp-filters { padding: 14px; }
+      .esp-filters-grid { grid-template-columns: 1fr; }
+      .esp-actions { flex-direction: column-reverse; gap: 8px; }
+      .esp-search-btn { width: 100%; justify-content: center; }
+      .esp-reset-btn { width: 100%; text-align: center; }
+      .esp-card { padding: 14px 16px; }
+      .esp-card-inner { flex-direction: column; }
+      .esp-card-main { padding-inline-end: 0; }
+      .esp-card-score {
+        width: 100%; border-inline-start: none; border-top: 1px solid var(--border);
+        padding-inline-start: 0; padding-top: 12px;
+        flex-direction: row; justify-content: space-between; align-items: center;
+      }
+    }
   `;
 
   function injectStyles(){
@@ -474,10 +499,10 @@
       card.className = 'esp-card';
 
       card.innerHTML = `
-        <div style="display:flex;gap:0;align-items:stretch">
+        <div class="esp-card-inner">
 
           <!-- Left: main info -->
-          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;padding-inline-end:16px">
+          <div class="esp-card-main">
 
             <!-- Identity -->
             <div style="display:flex;align-items:flex-start;gap:12px">
@@ -515,7 +540,7 @@
           </div>
 
           <!-- Right: score + Chat -->
-          <div style="flex-shrink:0;width:100px;border-inline-start:1px solid var(--border);padding-inline-start:16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:10px">
+          <div class="esp-card-score">
 
             <!-- Score block -->
             <div style="text-align:center;width:100%">

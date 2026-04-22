@@ -112,10 +112,20 @@
     }
     .epp-detail-link:hover { text-decoration: underline; }
 
+    .epp-dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
     @media(max-width:640px){
       .epp-outer { padding: 16px; }
-      .epp-hero { flex-direction: column; }
+      .epp-hero { flex-direction: column; padding: 20px; gap: 16px; }
+      .epp-hero-left { gap: 14px; }
+      .epp-card { padding: 16px 20px; }
       .epp-details-grid { grid-template-columns: 1fr 1fr; }
+      .epp-edit-btn { width: 100%; justify-content: center; }
+      .epp-dash-grid { grid-template-columns: 1fr; }
+    }
+    @media(max-width:400px){
+      .epp-details-grid { grid-template-columns: 1fr; }
+      .epp-employer-name { font-size: 17px; }
     }
   `;
 
@@ -161,7 +171,7 @@
               ${[me.job_title, company].filter(Boolean).join(' · ') || 'Complete your profile to get started'}
             </p>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div class="epp-dash-grid">
             <a href="#/employer/search" style="text-decoration:none">
               <div class="epp-card" style="margin-bottom:0;cursor:pointer;transition:border-color .15s"
                 onmouseenter="this.style.borderColor='var(--border2)'" onmouseleave="this.style.borderColor='var(--border)'">
