@@ -294,7 +294,7 @@ def search_candidates(
                 "edu": education,
                 "certs": certificates,
                 "smap": skill_map,
-                "score": score_candidate(skill_map, filters),
+                "score": score_candidate(skill_map, filters, experiences),
             }
         )
 

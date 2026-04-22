@@ -156,23 +156,81 @@ def passes_hard_filters(
     return True
 
 
-def score_candidate(skill_map: dict[str, dict], filters: dict) -> float:
-    soft_skills = filters.get("soft_skills") or []
+def score_candidate(
+    skill_map: dict[str, dict],
+    filters: dict,
+    experiences: list[dict] | None = None,
+) -> float:
+    """
+    Dynamic match score (0–100) based only on the employer's active filters.
 
-    if soft_skills:
-        scores = [
+    Base weights per filter type:
+        soft_skills          35
+        tech_skills          20
+        min_years_experience 15
+        major                10
+        location             10
+        graduation_year      10
+
+    Only active (non-empty) filters are included. Weights are renormalized
+    over the sum of active filter weights only, so unused filters never
+    reduce the score.
+
+    Binary filters (major, location, graduation_year) contribute 100 when
+    active because candidates who did not match were already excluded by
+    passes_hard_filters().
+    """
+    BASE_WEIGHTS = {
+        "soft_skills":          35,
+        "tech_skills":          20,
+        "min_years_experience": 15,
+        "major":                10,
+        "location":             10,
+        "graduation_year":      10,
+    }
+
+    components: dict[str, float] = {}
+
+    soft_filters = filters.get("soft_skills") or []
+    if soft_filters:
+        skill_scores = [
             float(row["score"])
-            for skill_filter in soft_skills
-            if (row := _find_skill(skill_map, skill_filter["name"])) and row.get("score") is not None
+            for sf in soft_filters
+            if (row := _find_skill(skill_map, sf["name"])) and row.get("score") is not None
         ]
-    else:
-        scores = [
-            float(skill["score"])
-            for skill in skill_map.values()
-            if skill.get("score") is not None
-        ]
+        components["soft_skills"] = (
+            round(sum(skill_scores) / len(skill_scores), 1) if skill_scores else 50.0
+        )
 
-    return round(sum(scores) / len(scores), 1) if scores else 0.0
+    tech_filters = [t for t in (filters.get("tech_skills") or []) if t.strip()]
+    if tech_filters:
+        hits = sum(1 for name in tech_filters if _find_skill(skill_map, name) is not None)
+        components["tech_skills"] = round(hits / len(tech_filters) * 100, 1)
+
+    min_exp = filters.get("min_years_experience")
+    if min_exp is not None and float(min_exp) > 0:
+        actual = _years_of_experience(experiences or [])
+        ratio = min(actual / float(min_exp), 2.0)
+        components["min_years_experience"] = round(ratio / 2.0 * 100, 1)
+
+    if filters.get("major"):
+        components["major"] = 100.0
+    if filters.get("location"):
+        components["location"] = 100.0
+    if filters.get("graduation_year") is not None:
+        components["graduation_year"] = 100.0
+
+    if not components:
+        all_scores = [
+            float(s["score"])
+            for s in skill_map.values()
+            if s.get("score") is not None
+        ]
+        return round(sum(all_scores) / len(all_scores), 1) if all_scores else 0.0
+
+    total_weight = sum(BASE_WEIGHTS[k] for k in components)
+    weighted_sum = sum(components[k] * BASE_WEIGHTS[k] for k in components)
+    return round(weighted_sum / total_weight, 1)
 
 
 def _strip(rows: list[dict]) -> list[dict]:
