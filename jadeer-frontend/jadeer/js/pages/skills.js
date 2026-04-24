@@ -182,7 +182,7 @@
     }
     loading.close();
 
-    // Backend returns 5 deterministic questions per call. UI is strictly 5 Qs.
+    // Backend returns 10 deterministic questions per call.
     const questions = toArr(batch.questions || batch);
     if(!questions.length){ toast('No questions returned','error'); return; }
 

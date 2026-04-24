@@ -39,6 +39,9 @@
   border-radius:var(--radius);padding:22px}
 .card-hover{transition:all .2s var(--ease)}
 .card-hover:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+/* Light mode — add visible shadow so cards lift off the background */
+[data-theme="light"] .card{box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.06)}
+[data-theme="light"] .card-hover:hover{box-shadow:0 4px 24px rgba(124,92,252,.14);border-color:rgba(124,92,252,.35)}
 .card-title{display:flex;align-items:center;justify-content:space-between;
   margin-bottom:16px;gap:12px}
 .card-title h3{font-size:16px}

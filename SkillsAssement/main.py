@@ -36,7 +36,7 @@ SKILL_TO_CATEGORY = {
 
 # ── Helper: call Nebius API ──────────────────────────────────────────────────
 def generate_questions(skill_name: str, job_Description: str) -> list[dict]:
-    """Call the Nebius-hosted Qwen model and return a list of 5 question dicts."""
+    """Call the Nebius-hosted Qwen model and return a list of 10 question dicts."""
 
     client = OpenAI(
         base_url="https://api.tokenfactory.nebius.com/v1/",
@@ -47,7 +47,7 @@ def generate_questions(skill_name: str, job_Description: str) -> list[dict]:
 
     system_prompt = f"""You are an expert assessment designer specializing in O*NET workplace competencies.
 
-Your task: Create exactly 5 SCENARIO-BASED multiple-choice questions that assess the soft skill described below,
+Your task: Create exactly 10 SCENARIO-BASED multiple-choice questions that assess the soft skill described below,
 tailored specifically to the job description provided.
 
 Job Description: {job_Description}
@@ -95,7 +95,7 @@ Each element must have this exact schema:
                 "content": [
                     {
                         "type": "text",
-                        "text": f"Generate 5 assessment questions for the O*NET soft skill: {skill_name}",
+                        "text": f"Generate 10 assessment questions for the O*NET soft skill: {skill_name}",
                     }
                 ],
             },
