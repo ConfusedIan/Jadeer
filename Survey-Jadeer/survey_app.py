@@ -151,6 +151,19 @@ st.markdown(
             color: {TEXT} !important;
             font-family: 'IBM Plex Sans Arabic', sans-serif !important;
             font-size: 15px !important;
+            text-align: right !important;
+            direction: rtl !important;
+        }}
+        div[role="radiogroup"] > label {{
+            text-align: right !important;
+        }}
+        .stSelectbox > div,
+        .stSelectbox div[data-baseweb="select"] div {{
+            text-align: right !important;
+            direction: rtl !important;
+        }}
+        .stForm, [data-testid="stForm"] {{
+            direction: rtl !important;
         }}
         div[role="radiogroup"] > label[data-checked="true"],
         div[role="radiogroup"] input:checked ~ div {{
@@ -312,19 +325,19 @@ Q1_OPTIONS = [
 ]
 Q2_OPTIONS = [
     "أ) الشركة هي اللي لازم تتحقق بنفسها قبل التوظيف",
-    "ب) لازم يكون فيه جهة أو منصة توثّق الشهادات من البداية",
-    "ج) الشهادات ما تفرق — الخبرة العملية أهم من أي شهادة",
-    "د) المقابلة الشخصية كفيلة تبيّن مين فاهم ومين لا",
+    "ب) لازم يكون فيه جهة أو منصة توثق الشهادات من البداية",
+    "ج) الشهادات ما تفرق، الخبرة العملية أهم من أي شهادة",
+    "د) المقابلة الشخصية كفيلة تبين مين فاهم ومين لا",
 ]
 Q3_OPTIONS = [
     "أ) أرسل نفس السيرة للوظيفتين",
-    "ب) أعدّل يدوي بس ما أعرف وش بالضبط أغيّر",
-    "ج) أتمنى لو فيه أداة تعدّلها لي حسب كل وظيفة",
-    "د) أقدّم على وحدة بس عشان ما أتعب",
+    "ب) أعدل يدوي بس ما أعرف وش بالضبط أغير",
+    "ج) أتمنى لو فيه أداة تعدلها لي حسب كل وظيفة",
+    "د) أقدم على وحدة بس عشان ما أتعب",
 ]
 Q4_OPTIONS = [
     "أ) ما أعرف كيف أبرز مهاراتي الشخصية",
-    "ب) ما أدري وش الشركات فعلاً تدوّر عليه",
+    "ب) ما أدري وش الشركات فعلا تدور عليه",
     "ج) كل السير الذاتية تطلع نفس الشكل",
     "د) ما عندي مشكلة بصراحة",
 ]
@@ -342,7 +355,7 @@ st.markdown(
     f"""
     <div class="jadeer-header">
         {logo_html}
-        <p class="jadeer-subtitle">شاركنا رأيك — ردّك يساعدنا نبني منصة تخدمك بشكل أفضل</p>
+        <p class="jadeer-subtitle">شاركنا رأيك وساعدنا نبني منصة تخدمك بشكل أفضل</p>
         <div class="jadeer-divider"></div>
     </div>
     """,
@@ -357,7 +370,7 @@ if st.session_state.submitted_id:
         f"""
         <div class="success-box">
             <div class="checkmark">✓</div>
-            تم تسجيل ردّك بنجاح. شكراً لوقتك!
+            تم تسجيل ردك بنجاح. شكرا لوقتك!
             <div class="ref">REF: {st.session_state.submitted_id}</div>
         </div>
         """,
@@ -380,7 +393,7 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q2</span> '
-        'لو شركة عاملت شهادتك الأونلاين اللي درست عليها شهر نفس معاملة شهادة شراها أحد بـ ٥٠ ريال — وش تشوف الحل؟</div>',
+        'لو شركة عاملت شهادتك الأونلاين اللي درست عليها شهر نفس معاملة شهادة شراها أحد ب ٥٠ ريال، وش تشوف الحل؟</div>',
         unsafe_allow_html=True,
     )
     q2 = st.radio("q2", Q2_OPTIONS, index=None, label_visibility="collapsed", key="q2")
@@ -388,7 +401,7 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q3</span> '
-        'قدّمت على وظيفتين مختلفة — وحدة "مدير مشاريع" والثانية "أخصائي موارد بشرية". وش تسوي بسيرتك الذاتية؟</div>',
+        'قدمت على وظيفتين مختلفة، وحدة "مدير مشاريع" والثانية "أخصائي موارد بشرية". وش تسوي بسيرتك الذاتية؟</div>',
         unsafe_allow_html=True,
     )
     q3 = st.radio("q3", Q3_OPTIONS, index=None, label_visibility="collapsed", key="q3")
@@ -404,8 +417,8 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q5</span> '
-        'لو فيه منصة تقدّم لك هالخدمات، رتّبها من الأهم لك إلى الأقل</div>'
-        '<div class="rank-hint">اختر رقم فريد (من ١ إلى ٤) لكل خدمة — ١ = الأهم</div>',
+        'لو فيه منصة تقدم لك هالخدمات، رتبها من الأهم لك إلى الأقل</div>'
+        '<div class="rank-hint">اختر رقم فريد من ١ إلى ٤ لكل خدمة، ١ = الأهم</div>',
         unsafe_allow_html=True,
     )
     ranks = {}
@@ -427,7 +440,7 @@ if submitted:
     if any(v is None for v in ranks.values()):
         errors.append("الرجاء ترتيب جميع الخدمات في السؤال الخامس")
     elif len(set(ranks.values())) != len(ranks):
-        errors.append("لازم ترتيب الخدمات بأرقام مختلفة (١ و ٢ و ٣ و ٤) — ما يصير تكرار")
+        errors.append("لازم ترتيب الخدمات بأرقام مختلفة (١ و ٢ و ٣ و ٤) بدون تكرار")
 
     if errors:
         st.markdown(
@@ -448,7 +461,7 @@ if submitted:
             st.rerun()
         except Exception as e:
             st.markdown(
-                f'<div class="error-box">تعذّر حفظ الرد في قاعدة البيانات:<br><code>{e}</code></div>',
+                f'<div class="error-box">تعذر حفظ الرد في قاعدة البيانات:<br><code>{e}</code></div>',
                 unsafe_allow_html=True,
             )
 
