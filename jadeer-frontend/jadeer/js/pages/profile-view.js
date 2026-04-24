@@ -108,28 +108,28 @@
               <h2>${fullName}</h2>
               ${headline?`<p class="muted mt-sm">${headline}</p>`:''}
               <div class="row mt" style="gap:18px;flex-wrap:wrap;font-size:13px;color:var(--text2)">
-                ${user.email?`<span>✉️ ${user.email}</span>`:''}
-                ${me.phone?`<span>📞 ${me.phone}</span>`:''}
-                ${me.location?`<span>📍 ${me.location}</span>`:''}
-                ${me.linkedin_url?`<a href="${me.linkedin_url}" target="_blank" rel="noopener">🔗 LinkedIn</a>`:''}
+                ${user.email?`<span> ${user.email}</span>`:''}
+                ${me.phone?`<span> ${me.phone}</span>`:''}
+                ${me.location?`<span> ${me.location}</span>`:''}
+                ${me.linkedin_url?`<a href="${me.linkedin_url}" target="_blank" rel="noopener">LinkedIn</a>`:''}
               </div>
             </div>
           </div>
         </div>
 
         <div class="card mt-lg">
-          <div class="card-title"><h3>🏢 <span data-i18n="work_experience">Work Experience</span></h3></div>
+          <div class="card-title"><h3><span data-i18n="work_experience">Work Experience</span></h3></div>
           ${expHtml}
         </div>
 
         <div class="card mt-lg">
-          <div class="card-title"><h3>🎓 <span data-i18n="education">Education</span></h3></div>
+          <div class="card-title"><h3><span data-i18n="education">Education</span></h3></div>
           ${eduHtml}
         </div>
 
         <div class="card mt-lg">
           <div class="card-title">
-            <h3>🏆 <span data-i18n="certificates">Certificates</span></h3>
+            <h3><span data-i18n="certificates">Certificates</span></h3>
             <a class="btn btn-sm btn-ghost" href="#/certificates" data-i18n="view_all_certs">View All Certificates</a>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px">${certHtml}</div>
@@ -137,7 +137,7 @@
 
         <div class="card mt-lg">
           <div class="card-title">
-            <h3>🎯 <span data-i18n="top_skills">Top Skills</span></h3>
+            <h3><span data-i18n="top_skills">Top Skills</span></h3>
             <a class="btn btn-sm btn-ghost" href="#/skills" data-i18n="view_all_skills">View All Skills</a>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px">${skillHtml}</div>
@@ -145,7 +145,7 @@
 
         <div class="card mt-lg">
           <div class="card-title">
-            <h3>📄 <span data-i18n="recent_cvs">Recent CVs</span></h3>
+            <h3><span data-i18n="recent_cvs">Recent CVs</span></h3>
             <a class="btn btn-sm btn-ghost" href="#/cvs" data-i18n="view_all_cvs">View All CVs</a>
           </div>
           ${cvHtml}
