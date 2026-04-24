@@ -13,13 +13,14 @@ async def log_requests(request: Request, call_next):
     return response
 
 PUBLIC_PATH_PREFIXES = ("/docs", "/openapi.json", "/redoc", "/health", "/status", "/dev", "/js", "/jadeer", "/css", "/assets", "/favicon")
+PUBLIC_PATH_SUFFIXES = ("/health",)
 
 async def auth_guard(request: Request, call_next):
     if request.method == "OPTIONS":
         return await call_next(request)
     
     path = request.url.path
-    if path.startswith(PUBLIC_PATH_PREFIXES):
+    if path.startswith(PUBLIC_PATH_PREFIXES) or path.endswith(PUBLIC_PATH_SUFFIXES):
         return await call_next(request)
 
     try:
