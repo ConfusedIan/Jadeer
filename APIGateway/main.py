@@ -81,6 +81,19 @@ app.middleware("http")(auth_guard)
 def health():
     return {"status": "ok", "service": "api-gateway"}
 
+@app.get("/debug/services", tags=["system"])
+def debug_services():
+    import requests as _req
+    from services.service_registry import SERVICES
+    results = {}
+    for name, url in SERVICES.items():
+        try:
+            r = _req.get(f"{url}/health", timeout=5)
+            results[name] = {"url": url, "status": r.status_code}
+        except Exception as e:
+            results[name] = {"url": url, "error": str(e)}
+    return results
+
 @app.get("/whoami", tags=["system"])
 def whoami(request: Request):
     user = getattr(request.state, "user", None) or {}

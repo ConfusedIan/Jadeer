@@ -470,16 +470,16 @@
     const identityEl = document.createElement('div');
     identityEl.className = 'cvb-identity';
     const metaHtml = [
-      user.email    && `<span>✉️ ${user.email}</span>`,
-      me.phone      && `<span>📞 ${me.phone}</span>`,
-      me.location   && `<span>📍 ${me.location}</span>`,
+      user.email    && `<span>${user.email}</span>`,
+      me.phone      && `<span>${me.phone}</span>`,
+      me.location   && `<span>${me.location}</span>`,
     ].filter(Boolean).join('');
     identityEl.innerHTML = `
       <div class="avatar avatar-lg">${window.JadeerUI.initials(fullName)}</div>
       <div class="cvb-identity-info">
         <p class="cvb-identity-name">${fullName}</p>
         <div class="cvb-identity-meta">${metaHtml || '<span style="color:var(--text3)">No contact info</span>'}</div>
-        <div class="cvb-identity-lock">🔒 Pulled from your profile — edit in Profile Settings</div>
+        <div class="cvb-identity-lock">Pulled from your profile — edit in Profile Settings</div>
       </div>
     `;
 
@@ -488,13 +488,13 @@
     sectionsEl.className = 'cvb-sections';
 
     sectionsEl.appendChild(makeBioSection());
-    sectionsEl.appendChild(makeSection('experience',   '💼', 'Work Experience', exps,
+    sectionsEl.appendChild(makeSection('experience',   '', 'Work Experience', exps,
       x => expRow(x,  shouldCheck('experience',   x, preselect, catalogMap))));
-    sectionsEl.appendChild(makeSection('education',    '🎓', 'Education',       edus,
+    sectionsEl.appendChild(makeSection('education',    '', 'Education',       edus,
       x => eduRow(x,  true)));
-    sectionsEl.appendChild(makeSection('skills',       '🎯', 'Skills',          skills,
+    sectionsEl.appendChild(makeSection('skills',       '', 'Skills',          skills,
       x => skillRow(x, shouldCheck('skill',        x, preselect, catalogMap), catalogMap)));
-    sectionsEl.appendChild(makeSection('certificates', '🏆', 'Certificates',    certs,
+    sectionsEl.appendChild(makeSection('certificates', '', 'Certificates',    certs,
       x => certRow(x, shouldCheck('certificate',   x, preselect, catalogMap))));
 
     initDragDrop(sectionsEl);
@@ -527,7 +527,7 @@
     const footBtns = el(`
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" id="cvb-cancel">Cancel</button>
-        <button class="btn btn-primary" id="cvb-gen">📄 Generate PDF</button>
+        <button class="btn btn-primary" id="cvb-gen"> Generate PDF</button>
       </div>
     `);
 
@@ -544,7 +544,7 @@
       const payload = collectPayload(bodyWrap);
       const genBtn = footBtns.querySelector('#cvb-gen');
       genBtn.disabled = true;
-      genBtn.innerHTML = '<span class="spinner"></span> Generating…';
+      genBtn.innerHTML = '<span class="spinner"></span>Generating…';
 
       try {
         const token = getToken();
@@ -571,7 +571,7 @@
       } catch(e) {
         toast(e.message || 'Could not generate CV', 'error');
         genBtn.disabled = false;
-        genBtn.innerHTML = '📄 Generate PDF';
+        genBtn.innerHTML = 'Generate PDF';
       }
     };
   }
@@ -613,7 +613,7 @@
       `;
       const list = content.querySelector('#cv-list');
       if (!cvs.length) {
-        list.innerHTML = `<div class="empty"><div class="empty-icon">📄</div><p class="muted" data-i18n="no_cvs">No CVs yet.</p></div>`;
+        list.innerHTML = `<div class="empty"><div class="empty-icon"></div><p class="muted" data-i18n="no_cvs">No CVs yet.</p></div>`;
       } else {
         cvs.forEach(c => {
           const row = el(`
@@ -621,7 +621,7 @@
               <div class="row-between" style="align-items:flex-start;gap:12px">
                 <div style="flex:1;min-width:0">
                   <div class="row gap-sm" style="margin-bottom:6px">
-                    <span style="font-size:20px">📄</span>
+                    <span style="font-size:20px"></span>
                     <strong>${c.name || c.cv_name || 'CV'}</strong>
                   </div>
                   <div class="muted" style="font-size:12px">
