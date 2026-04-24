@@ -68,6 +68,36 @@
     `;
     root.innerHTML = html;
     window.JadeerI18n.applyTranslations(root);
+
+    const anyCv = relevant.length || exps.length || certs.length;
+    if(anyCv){
+      const cta = document.createElement('div');
+      cta.className = 'card mt-lg';
+      cta.style.cssText = 'background:linear-gradient(135deg,rgba(124,92,252,.1),rgba(192,132,252,.06));border-color:rgba(124,92,252,.3)';
+      cta.innerHTML = `
+        <div class="row-between" style="flex-wrap:wrap;gap:12px">
+          <div>
+            <h3>Ready to apply?</h3>
+            <p class="muted mt-sm" style="font-size:13px">Build a tailored CV with these recommendations pre-selected as your starting point.</p>
+          </div>
+          <button class="btn btn-primary" id="create-cv-btn">📄 Create this CV</button>
+        </div>
+      `;
+      root.appendChild(cta);
+      cta.querySelector('#create-cv-btn').onclick = () => {
+        if(!window.JadeerCV){ toast('CV module not available','error'); return; }
+        window.location.hash = '#/cvs';
+        requestAnimationFrame(() => {
+          window.JadeerCV.openCustomize({
+            preselect: {
+              skills:      relevant.map(s => s.name),
+              experiences: exps.map(e => ({ job_title: e.job_title, company: e.company })),
+              certs:       certs.map(c => c.name),
+            },
+          });
+        });
+      };
+    }
   }
 
   register('/recommendations', (_p, root)=>{

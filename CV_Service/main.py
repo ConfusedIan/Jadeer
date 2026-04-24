@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI, Header, Response, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -94,9 +94,19 @@ class CVRequest(BaseModel):
     include_scores: bool = True
     include_verified_badges: bool = True
 
-    # Text rewording — items must already exist in the user's profile
+    # Content overrides
     custom_bio: Optional[str] = None
-    experience_overrides: Optional[Dict[int, str]] = None  # {0: "reworded desc"} by index
+    experience_overrides: Optional[Dict[int, str]] = None          # legacy: by 0-based index
+    experience_desc_overrides: Optional[Dict[str, str]] = None     # by exp_id string
+
+    # Per-item selection (None = include all; [] = include none)
+    selected_experience_ids: Optional[List[str]] = None
+    selected_education_ids: Optional[List[str]] = None
+    selected_certificate_ids: Optional[List[str]] = None
+    selected_skill_ids: Optional[List[str]] = None
+
+    # Section render order (keys: "bio","experience","education","certificates","skills")
+    section_order: Optional[List[str]] = None
 
     # Assessment badge threshold
     skill_threshold: float = 70.0
@@ -126,11 +136,47 @@ async def cv_me_pdf_post(
     real = await get_profile_bundle(x_user_id)
     data = merge_real_with_dummy(real, dummy_bundle())
 
-    # Apply bio override (rewording only — profile remains unchanged)
+    # ── Per-item filtering (None = no filter; [] = include nothing) ───────────
+    if body.selected_experience_ids is not None:
+        id_set = {str(i) for i in body.selected_experience_ids}
+        data["experiences"] = [
+            e for e in data.get("experiences", [])
+            if str(e.get("exp_id", "")) in id_set
+        ]
+
+    if body.selected_education_ids is not None:
+        id_set = {str(i) for i in body.selected_education_ids}
+        data["education"] = [
+            e for e in data.get("education", [])
+            if str(e.get("edu_id", "")) in id_set
+        ]
+
+    if body.selected_certificate_ids is not None:
+        id_set = {str(i) for i in body.selected_certificate_ids}
+        data["certificates"] = [
+            c for c in data.get("certificates", [])
+            if str(c.get("certificate_id", "")) in id_set
+        ]
+
+    if body.selected_skill_ids is not None:
+        id_set = {str(i) for i in body.selected_skill_ids}
+        data["skills"] = [
+            s for s in data.get("skills", [])
+            if str(s.get("id", "")) in id_set
+        ]
+
+    # ── Content overrides ─────────────────────────────────────────────────────
     if body.custom_bio is not None:
         data["profile"]["bio"] = body.custom_bio
 
-    # Apply experience description overrides (valid indices only)
+    # Description overrides by exp_id (from new customization UI)
+    if body.experience_desc_overrides:
+        for exp in data.get("experiences", []):
+            eid = str(exp.get("exp_id", ""))
+            if eid in body.experience_desc_overrides:
+                exp["description"] = body.experience_desc_overrides[eid]
+
+    # Legacy index-based overrides (kept for backward compatibility)
     if body.experience_overrides:
         exps = data.get("experiences", [])
         for idx, new_desc in body.experience_overrides.items():
@@ -146,6 +192,7 @@ async def cv_me_pdf_post(
         include_scores=body.include_scores,
         include_verified_badges=body.include_verified_badges,
         skill_threshold=body.skill_threshold,
+        section_order=body.section_order,
     )
 
     if body.save_to_history:
