@@ -94,6 +94,17 @@ def debug_services():
             results[name] = {"url": url, "error": str(e)}
     return results
 
+@app.get("/debug/profile-test", tags=["system"])
+def debug_profile_test():
+    import requests as _req
+    from services.service_registry import SERVICES
+    url = f"{SERVICES['profile']}/profile/me"
+    try:
+        r = _req.get(url, headers={"X-User-Id": "debug-test"}, timeout=10)
+        return {"url": url, "status": r.status_code, "body": r.text[:500]}
+    except Exception as e:
+        return {"url": url, "error": str(e)}
+
 @app.get("/whoami", tags=["system"])
 def whoami(request: Request):
     user = getattr(request.state, "user", None) or {}
