@@ -181,9 +181,9 @@
       const dark = getTheme() === 'dark';
       themeIcon.src = dark ? 'icons/Light_Mode.png' : 'icons/Dark_Mode.png';
       themeIcon.alt = dark ? 'Switch to light mode' : 'Switch to dark mode';
-      langIcon.src  = dark ? 'icons/language.png' : 'icons/Language_Light.png';
+      langIcon.src  = dark ? 'icons/Language_Light.png' : 'icons/Language.png';
       logoImgs.forEach(img => {
-        img.src = dark ? 'icons/Jadeer_Logo.png' : 'icons/photo_2026-04-25_13-22-44-removebg-preview.png';
+        img.src = dark ? 'icons/Jadeer_Logo_light.png' : 'icons/Jadeer_Logo.png';
       });
     };
     syncTheme();
