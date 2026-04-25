@@ -2,7 +2,7 @@
   const extra = {
     en:{
       skills_title:'Skills',
-      skills_sub:'Manage your technical and soft skills. Pass the 10-question assessment (70+ score) to add soft skills to your profile.',
+      skills_sub:'Manage your technical and soft skills.',
       total_skills:'Total Skills', verified_skills:'Verified Skills',
       advanced_skills:'Advanced Skills', avg_score:'Average Score',
       soft_skills:'Soft Skills', technical_skills:'Technical Skills',

@@ -3,7 +3,7 @@
     en:{
       // Recommendations
       recommendations:'Get Recommendations',
-      recommendations_sub:'Paste a job description and our AI will analyze how you match, and what to improve.',
+      recommendations_sub:'Paste a job description and Jadeer will analyze how you match, and what to improve.',
       job_description:'Job Description',
       job_desc_ph:'Paste the full job description here…',
       analyze_btn:'Analyze My Match',
@@ -23,7 +23,7 @@
       delete:'Delete',
       edit_cv:'Edit CV',
       generated_on:'Generated on',
-      no_cvs:'No CVs yet. Click "Generate CV" to create your first one.',
+      no_cvs:'No CVs yet.',
       cv_generate_wait:'Generating your CV… this can take up to 30 seconds.',
       // Edit CV modal
       customize_cv:'Customize Your CV',
