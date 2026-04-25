@@ -93,11 +93,13 @@ st.markdown(
             box-shadow: 0 4px 20px rgba(0,0,0,0.25);
             position: relative;
             overflow: hidden;
+            direction: rtl;
+            text-align: right;
         }}
         .q-card::before {{
             content: "";
             position: absolute;
-            inset-inline-start: 0;
+            right: 0;
             top: 0;
             bottom: 0;
             width: 3px;
@@ -109,18 +111,8 @@ st.markdown(
             font-size: 17px;
             margin-bottom: 16px;
             line-height: 1.75;
-        }}
-        .q-number {{
-            display: inline-block;
-            background: linear-gradient(135deg, {PURPLE} 0%, {PURPLE_DEEP} 100%);
-            color: white;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 700;
-            font-size: 13px;
-            padding: 3px 12px;
-            border-radius: 999px;
-            margin-left: 8px;
-            vertical-align: middle;
+            text-align: right;
+            direction: rtl;
         }}
         .rank-hint {{
             color: {TEXT_MID};
@@ -130,6 +122,8 @@ st.markdown(
             background: rgba(77,212,172,0.08);
             border-right: 3px solid {TEAL};
             border-radius: 8px;
+            text-align: right;
+            direction: rtl;
         }}
 
         /* Radio options */
@@ -418,15 +412,14 @@ if st.session_state.submitted_id:
 
 with st.form("survey_form", clear_on_submit=False):
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q0</span> '
-        'انت حاليا</div>',
+        '<div class="q-card"><div class="q-title">انت حاليا</div>',
         unsafe_allow_html=True,
     )
     q0 = st.radio("q0", Q0_OPTIONS, index=None, label_visibility="collapsed", key="q0")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q1</span> '
+        '<div class="q-card"><div class="q-title">'
         'بعد ما جربت اختبار المهارات في جدير وش رايك فيه</div>',
         unsafe_allow_html=True,
     )
@@ -434,7 +427,7 @@ with st.form("survey_form", clear_on_submit=False):
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q2</span> '
+        '<div class="q-card"><div class="q-title">'
         'وثقت شهاداتك في جدير وطلعت بعلامة موثقة ولما قدمت على وظيفة كان فيه مرشح ثاني نفس مؤهلاتك بس شهاداته بدون توثيق تحس ان التوثيق يفرق</div>',
         unsafe_allow_html=True,
     )
@@ -442,7 +435,7 @@ with st.form("survey_form", clear_on_submit=False):
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q3</span> '
+        '<div class="q-card"><div class="q-title">'
         'بعد ما شفت كيف جدير يعدل السيرة الذاتية حسب الوصف الوظيفي وش حسيت</div>',
         unsafe_allow_html=True,
     )
@@ -450,7 +443,7 @@ with st.form("survey_form", clear_on_submit=False):
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q4</span> '
+        '<div class="q-card"><div class="q-title">'
         'صاحبك يدور وظيفة من ٣ شهور وما لقى بعد ما جربت جدير وش بتقوله</div>',
         unsafe_allow_html=True,
     )
@@ -458,7 +451,7 @@ with st.form("survey_form", clear_on_submit=False):
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q5</span> '
+        '<div class="q-card"><div class="q-title">'
         'بعد ما جربت جدير رتب الخدمات من اكثر وحدة عجبتك الى اقلها</div>'
         '<div class="rank-hint">اختر رقم فريد من ١ إلى ٥ لكل خدمة (١ = افضل وحدة)</div>',
         unsafe_allow_html=True,
@@ -471,7 +464,7 @@ with st.form("survey_form", clear_on_submit=False):
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="q-card"><div class="q-title"><span class="q-number">Q6</span> '
+        '<div class="q-card"><div class="q-title">'
         'عندك اي اقتراح او ملاحظة او شي تتمنى تشوفه في جدير</div>',
         unsafe_allow_html=True,
     )
