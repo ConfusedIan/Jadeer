@@ -11,6 +11,30 @@ load_dotenv(BASE_DIR / ".env")
 
 st.set_page_config(page_title="", page_icon="🌀", layout="centered")
 
+if "show_account" not in st.session_state:
+    st.session_state.show_account = False
+
+if not st.session_state.show_account:
+    st.markdown(
+        """
+        <style>
+            [data-testid="stToolbar"],
+            [data-testid="stDecoration"],
+            [data-testid="stStatusWidget"],
+            [data-testid="stDeployButton"],
+            [data-testid="manage-app-button"],
+            .viewerBadge_container__1QSob,
+            .viewerBadge_link__1S137,
+            .styles_viewerBadge__1yB5_,
+            iframe[title*="streamlit"i],
+            #MainMenu,
+            header[data-testid="stHeader"] > div:last-child,
+            footer { display: none !important; visibility: hidden !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 # ─── Jadeer brand palette ────────────────────────────────────────────────
 BG = "#0A0A0F"
 SURFACE = "#141420"
@@ -522,3 +546,8 @@ st.markdown(
     f'<div class="jadeer-footer">Jadeer <span class="dot">●</span> Rising by merit</div>',
     unsafe_allow_html=True,
 )
+
+_btn_label = "اخفاء حساب جدير" if st.session_state.show_account else "اظهار حساب جدير"
+if st.button(_btn_label, key="toggle_account_btn"):
+    st.session_state.show_account = not st.session_state.show_account
+    st.rerun()
