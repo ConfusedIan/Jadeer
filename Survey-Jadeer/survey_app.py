@@ -11,6 +11,26 @@ load_dotenv(BASE_DIR / ".env")
 
 st.set_page_config(page_title="", page_icon="🌀", layout="centered")
 
+st.markdown(
+    """
+    <style>
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        [data-testid="stStatusWidget"],
+        [data-testid="stDeployButton"],
+        [data-testid="manage-app-button"],
+        .viewerBadge_container__1QSob,
+        .viewerBadge_link__1S137,
+        .styles_viewerBadge__1yB5_,
+        iframe[title*="streamlit"i],
+        #MainMenu,
+        header[data-testid="stHeader"] > div:last-child,
+        footer { display: none !important; visibility: hidden !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # ─── Jadeer brand palette ────────────────────────────────────────────────
 BG = "#0A0A0F"
 SURFACE = "#141420"
