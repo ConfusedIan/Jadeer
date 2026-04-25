@@ -55,6 +55,18 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 def health():
     return {"status": "ok", "service": "profile"}
 
+@app.get("/debug/env", tags=["system"])
+def debug_env():
+    import os
+    url = os.getenv("SUPABASE_URL", "NOT SET")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "NOT SET")
+    return {
+        "supabase_url": url,
+        "key_length": len(key),
+        "key_dot_count": key.count("."),
+        "key_preview": key[:20] + "..." + key[-10:] if len(key) > 30 else key,
+    }
+
 @app.get("/profile/me/bundle", tags=["profile"])
 def get_profile_bundle(x_user_id: str = Header(default=None, alias="X-User-Id")):
     if not x_user_id:

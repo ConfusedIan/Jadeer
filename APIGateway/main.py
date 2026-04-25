@@ -105,6 +105,19 @@ def debug_profile_test():
     except Exception as e:
         return {"url": url, "error": str(e)}
 
+@app.get("/debug/supabase-test", tags=["system"])
+def debug_supabase_test():
+    import requests as _req
+    import os
+    url = os.getenv("SUPABASE_URL", "NOT SET")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "NOT SET")
+    return {
+        "supabase_url": url,
+        "key_length": len(key),
+        "key_preview": key[:30] + "..." + key[-10:] if len(key) > 40 else key,
+        "key_dot_count": key.count("."),
+    }
+
 @app.get("/whoami", tags=["system"])
 def whoami(request: Request):
     user = getattr(request.state, "user", None) or {}
