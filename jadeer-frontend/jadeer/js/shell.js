@@ -99,7 +99,7 @@
 
               <!-- Language toggle with icon -->
               <button class="lang-toggle" id="lang-toggle">
-                <img src="icons/language.png" alt="" class="lang-icon" aria-hidden="true">
+                <img id="lang-icon" src="icons/language.png" alt="" class="lang-icon" aria-hidden="true">
                 <span id="lang-label"></span>
               </button>
 
@@ -175,10 +175,16 @@
          Dark mode  → show Light_Mode.png (sun, "click to go light")
          Light mode → show Dark_Mode.png  (moon, "click to go dark") */
     const themeIcon = node.querySelector('#theme-icon');
+    const langIcon  = node.querySelector('#lang-icon');
+    const logoImgs  = node.querySelectorAll('.brand-logo');
     const syncTheme = () => {
       const dark = getTheme() === 'dark';
       themeIcon.src = dark ? 'icons/Light_Mode.png' : 'icons/Dark_Mode.png';
       themeIcon.alt = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      langIcon.src  = dark ? 'icons/language.png' : 'icons/Language_Light.png';
+      logoImgs.forEach(img => {
+        img.src = dark ? 'icons/Jadeer_Logo.png' : 'icons/photo_2026-04-25_13-22-44-removebg-preview.png';
+      });
     };
     syncTheme();
     node.querySelector('#theme-tgl').onclick = () => {
