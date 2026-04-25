@@ -165,6 +165,27 @@ st.markdown(
         .stForm, [data-testid="stForm"] {{
             direction: rtl !important;
         }}
+
+        /* Textarea */
+        .stTextArea textarea {{
+            background: {SURFACE_2} !important;
+            color: {TEXT} !important;
+            border: 1px solid {BORDER} !important;
+            border-radius: 12px !important;
+            font-family: 'IBM Plex Sans Arabic', sans-serif !important;
+            font-size: 15px !important;
+            text-align: right !important;
+            direction: rtl !important;
+            padding: 12px 14px !important;
+        }}
+        .stTextArea textarea:focus {{
+            border-color: {PURPLE} !important;
+            box-shadow: 0 0 0 1px {PURPLE} !important;
+        }}
+        .stTextArea textarea::placeholder {{
+            color: {TEXT_DIM} !important;
+            text-align: right !important;
+        }}
         div[role="radiogroup"] > label[data-checked="true"],
         div[role="radiogroup"] input:checked ~ div {{
             background: rgba(131,103,255,0.15) !important;
@@ -301,52 +322,65 @@ def insert_response(payload: dict):
             cur.execute(
                 """
                 insert into survey_responses (
-                    q1_skills_proof, q2_cert_verification,
-                    q3_cv_tailoring, q4_cv_biggest_problem,
-                    q5_rank_skills_assessment, q5_rank_cert_verification,
-                    q5_rank_cv_tailoring, q5_rank_smart_matching
-                ) values (%s, %s, %s, %s, %s, %s, %s, %s)
+                    q0_status,
+                    q1_assessment_feedback, q2_certification_value,
+                    q3_cv_tailoring_feedback, q4_friend_advice,
+                    q5_rank_assessment, q5_rank_cert_verification,
+                    q5_rank_cv_recommendations, q5_rank_cv_generation,
+                    q5_rank_company_search,
+                    q6_open_feedback
+                ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 returning id;
                 """,
                 (
+                    payload["q0"],
                     payload["q1"], payload["q2"], payload["q3"], payload["q4"],
-                    payload["q5_skills"], payload["q5_cert"],
-                    payload["q5_cv"], payload["q5_match"],
+                    payload["q5_assessment"], payload["q5_cert"],
+                    payload["q5_cv_recs"], payload["q5_cv_gen"],
+                    payload["q5_company_search"],
+                    payload["q6"] or None,
                 ),
             )
             return cur.fetchone()[0]
 
 
+Q0_OPTIONS = [
+    "أ) طالب جامعي",
+    "ب) باحث عن عمل",
+    "ج) موظف",
+    "د) مسؤول توظيف / HR",
+]
 Q1_OPTIONS = [
-    "أ) المقابلة الشخصية كافية",
-    "ب) اختبار مواقف عملية",
-    "ج) توصية من شخص اشتغل معه",
-    "د) خبرته السابقة بالسيرة الذاتية تكفي",
+    "أ) اضاف لي شي جديد ما كنت اعرفه عن نفسي",
+    "ب) النتيجة كانت متوقعة ما فاجأتني",
+    "ج) حلو بس احتاج اجربه بتركيز اكثر",
+    "د) ما اقتنعت فيه",
 ]
 Q2_OPTIONS = [
-    "أ) الشركة هي اللي لازم تتحقق بنفسها قبل التوظيف",
-    "ب) لازم يكون فيه جهة أو منصة توثق الشهادات من البداية",
-    "ج) الشهادات ما تفرق، الخبرة العملية أهم من أي شهادة",
-    "د) المقابلة الشخصية كفيلة تبين مين فاهم ومين لا",
+    "أ) اكيد يعطيني افضلية واضحة",
+    "ب) يمكن يفرق بس يعتمد على الشركة نفسها",
+    "ج) ما اتوقع الشركات تركز على هالشي",
+    "د) المقابلة هي اللي تحسم مو التوثيق",
 ]
 Q3_OPTIONS = [
-    "أ) أرسل نفس السيرة للوظيفتين",
-    "ب) أعدل يدوي بس ما أعرف وش بالضبط أغير",
-    "ج) أتمنى لو فيه أداة تعدلها لي حسب كل وظيفة",
-    "د) أقدم على وحدة بس عشان ما أتعب",
+    "أ) شي احتاجه فعلا كل وظيفة تحتاج سيرة مختلفة",
+    "ب) فكرة حلوة بس افضل اعدل بنفسي",
+    "ج) ما لاحظت فرق كبير عن سيرتي الحالية",
+    "د) ما وصلت لهالجزء",
 ]
 Q4_OPTIONS = [
-    "أ) ما أعرف كيف أبرز مهاراتي الشخصية",
-    "ب) ما أدري وش الشركات فعلا تدور عليه",
-    "ج) كل السير الذاتية تطلع نفس الشكل",
-    "د) ما عندي مشكلة بصراحة",
+    "أ) جرب جدير ممكن يساعدك تعرف وين المشكلة",
+    "ب) عدل سيرتك بنفسك وقدم اكثر",
+    "ج) المنصات ما تفيد لازم واسطة",
+    "د) روح معارض توظيف احسن",
 ]
-RANK_CHOICES = [1, 2, 3, 4]
+RANK_CHOICES = [1, 2, 3, 4, 5]
 Q5_ITEMS = [
-    ("q5_skills", "تقييم مهاراتك الشخصية باختبار مواقف"),
-    ("q5_cert", "التحقق من شهاداتك وتوثيقها"),
-    ("q5_cv", "تعديل سيرتك الذاتية حسب كل وظيفة"),
-    ("q5_match", "بحث ذكي يربطك بالشركة المناسبة"),
+    ("q5_assessment", "اختبار المهارات"),
+    ("q5_cert", "توثيق الشهادات"),
+    ("q5_cv_recs", "توصيات السيرة الذاتية"),
+    ("q5_cv_gen", "توليد السيرة الذاتية"),
+    ("q5_company_search", "بحث الشركات عن المرشحين"),
 ]
 
 
@@ -355,7 +389,7 @@ st.markdown(
     f"""
     <div class="jadeer-header">
         {logo_html}
-        <p class="jadeer-subtitle">شاركنا رأيك وساعدنا نبني منصة تخدمك بشكل أفضل</p>
+        <p class="jadeer-subtitle">وش رايك</p>
         <div class="jadeer-divider"></div>
     </div>
     """,
@@ -384,8 +418,16 @@ if st.session_state.submitted_id:
 
 with st.form("survey_form", clear_on_submit=False):
     st.markdown(
+        '<div class="q-card"><div class="q-title"><span class="q-number">Q0</span> '
+        'انت حاليا</div>',
+        unsafe_allow_html=True,
+    )
+    q0 = st.radio("q0", Q0_OPTIONS, index=None, label_visibility="collapsed", key="q0")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q1</span> '
-        'وش أكثر شي يثبت إن الشخص عنده مهارات شخصية زي التواصل والقيادة؟</div>',
+        'بعد ما جربت اختبار المهارات في جدير وش رايك فيه</div>',
         unsafe_allow_html=True,
     )
     q1 = st.radio("q1", Q1_OPTIONS, index=None, label_visibility="collapsed", key="q1")
@@ -393,7 +435,7 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q2</span> '
-        'لو شركة عاملت شهادتك الأونلاين اللي درست عليها شهر نفس معاملة شهادة شراها أحد ب ٥٠ ريال، وش تشوف الحل؟</div>',
+        'وثقت شهاداتك في جدير وطلعت بعلامة موثقة ولما قدمت على وظيفة كان فيه مرشح ثاني نفس مؤهلاتك بس شهاداته بدون توثيق تحس ان التوثيق يفرق</div>',
         unsafe_allow_html=True,
     )
     q2 = st.radio("q2", Q2_OPTIONS, index=None, label_visibility="collapsed", key="q2")
@@ -401,7 +443,7 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q3</span> '
-        'قدمت على وظيفتين مختلفة، وحدة "مدير مشاريع" والثانية "أخصائي موارد بشرية". وش تسوي بسيرتك الذاتية؟</div>',
+        'بعد ما شفت كيف جدير يعدل السيرة الذاتية حسب الوصف الوظيفي وش حسيت</div>',
         unsafe_allow_html=True,
     )
     q3 = st.radio("q3", Q3_OPTIONS, index=None, label_visibility="collapsed", key="q3")
@@ -409,7 +451,7 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q4</span> '
-        'وش أكبر مشكلة تواجهك بسيرتك الذاتية؟</div>',
+        'صاحبك يدور وظيفة من ٣ شهور وما لقى بعد ما جربت جدير وش بتقوله</div>',
         unsafe_allow_html=True,
     )
     q4 = st.radio("q4", Q4_OPTIONS, index=None, label_visibility="collapsed", key="q4")
@@ -417,15 +459,26 @@ with st.form("survey_form", clear_on_submit=False):
 
     st.markdown(
         '<div class="q-card"><div class="q-title"><span class="q-number">Q5</span> '
-        'لو فيه منصة تقدم لك هالخدمات، رتبها من الأهم لك إلى الأقل</div>'
-        '<div class="rank-hint">اختر رقم فريد من ١ إلى ٤ لكل خدمة، ١ = الأهم</div>',
+        'بعد ما جربت جدير رتب الخدمات من اكثر وحدة عجبتك الى اقلها</div>'
+        '<div class="rank-hint">اختر رقم فريد من ١ إلى ٥ لكل خدمة (١ = افضل وحدة)</div>',
         unsafe_allow_html=True,
     )
     ranks = {}
     for key, label in Q5_ITEMS:
         ranks[key] = st.selectbox(
-            label, RANK_CHOICES, index=None, key=f"rank_{key}", placeholder="اختر الترتيب…"
+            label, RANK_CHOICES, index=None, key=f"rank_{key}", placeholder="اختر الترتيب"
         )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="q-card"><div class="q-title"><span class="q-number">Q6</span> '
+        'عندك اي اقتراح او ملاحظة او شي تتمنى تشوفه في جدير</div>',
+        unsafe_allow_html=True,
+    )
+    q6 = st.text_area(
+        "q6", value="", height=140, label_visibility="collapsed",
+        placeholder="اكتب اقتراحك هنا (اختياري)", key="q6",
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
     submitted = st.form_submit_button("إرسال الإجابات")
@@ -433,6 +486,7 @@ with st.form("survey_form", clear_on_submit=False):
 
 if submitted:
     errors = []
+    if not q0: errors.append("الرجاء الإجابة على السؤال صفر")
     if not q1: errors.append("الرجاء الإجابة على السؤال الأول")
     if not q2: errors.append("الرجاء الإجابة على السؤال الثاني")
     if not q3: errors.append("الرجاء الإجابة على السؤال الثالث")
@@ -440,7 +494,7 @@ if submitted:
     if any(v is None for v in ranks.values()):
         errors.append("الرجاء ترتيب جميع الخدمات في السؤال الخامس")
     elif len(set(ranks.values())) != len(ranks):
-        errors.append("لازم ترتيب الخدمات بأرقام مختلفة (١ و ٢ و ٣ و ٤) بدون تكرار")
+        errors.append("لازم ترتيب الخدمات بأرقام مختلفة من ١ إلى ٥ بدون تكرار")
 
     if errors:
         st.markdown(
@@ -449,13 +503,15 @@ if submitted:
         )
     else:
         try:
-            ensure_schema()
             new_id = insert_response({
+                "q0": q0,
                 "q1": q1, "q2": q2, "q3": q3, "q4": q4,
-                "q5_skills": ranks["q5_skills"],
+                "q5_assessment": ranks["q5_assessment"],
                 "q5_cert": ranks["q5_cert"],
-                "q5_cv": ranks["q5_cv"],
-                "q5_match": ranks["q5_match"],
+                "q5_cv_recs": ranks["q5_cv_recs"],
+                "q5_cv_gen": ranks["q5_cv_gen"],
+                "q5_company_search": ranks["q5_company_search"],
+                "q6": (q6 or "").strip(),
             })
             st.session_state.submitted_id = str(new_id)
             st.rerun()
