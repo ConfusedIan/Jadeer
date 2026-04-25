@@ -49,7 +49,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"error": "Internal server error", "code": 500})
+    return JSONResponse(status_code=500, content={"error": str(exc), "type": type(exc).__name__, "code": 500})
 
 @app.get("/health", tags=["system"])
 def health():
