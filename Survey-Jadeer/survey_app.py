@@ -40,9 +40,12 @@ st.markdown(
     <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
+        html, body, [class*="css"], .stApp, .stApp *,
+        button, input, textarea, select, p, span, div, label, h1, h2, h3, h4, h5, h6 {{
+            font-family: 'IBM Plex Sans Arabic', sans-serif !important;
+        }}
         html, body, [class*="css"] {{
             direction: rtl;
-            font-family: 'IBM Plex Sans Arabic', 'Space Grotesk', sans-serif !important;
             color: {TEXT};
         }}
         .stApp {{
@@ -383,7 +386,7 @@ st.markdown(
     f"""
     <div class="jadeer-header">
         {logo_html}
-        <p class="jadeer-subtitle">وش رايك</p>
+        <p class="jadeer-subtitle">وش رايك ؟</p>
         <div class="jadeer-divider"></div>
     </div>
     """,
