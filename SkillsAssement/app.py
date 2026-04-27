@@ -4,6 +4,7 @@ import json
 import re
 import io
 import csv
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -104,6 +105,23 @@ def get_occupations() -> dict:
 
 OCC_MAP = get_occupations()
 OCC_TITLES = list(OCC_MAP.keys())
+
+# ── In-memory caches ─────────────────────────────────────────────────────────
+_CACHE_TTL = 86400  # 24 hours
+
+_occupation_cache: dict[str, dict] = {}   # user_id → {data, ts}
+_question_cache: dict[str, dict] = {}     # "occ_code:skill_name" → {data, ts}
+
+
+def _cache_get(store: dict, key: str):
+    entry = store.get(key)
+    if entry and time.time() - entry["ts"] < _CACHE_TTL:
+        return entry["data"]
+    return None
+
+
+def _cache_set(store: dict, key: str, data):
+    store[key] = {"data": data, "ts": time.time()}
 
 
 def get_skill_data(occ_code: str, selected_skills: list[str]) -> list[dict]:
@@ -648,6 +666,11 @@ def match_occupation(authorization: str = Header(...)):
             detail="No profile data found. Please complete your Jadeer profile first.",
         )
 
+    # Return cached occupation match if available
+    cached = _cache_get(_occupation_cache, user.id)
+    if cached:
+        return cached
+
     # LLM match to O*NET occupation
     matched_title = match_occupation_from_summary(user_summary)
     occ_code = OCC_MAP.get(matched_title)
@@ -665,7 +688,7 @@ def match_occupation(authorization: str = Header(...)):
     priority_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
     all_skill_data.sort(key=lambda s: (priority_order.get(s["priority"], 3), -s["standardized_importance"]))
 
-    return {
+    result = {
         "user_id": user.id,
         "user_email": user.email,
         "user_summary_sent_to_llm": user_summary,
@@ -673,6 +696,8 @@ def match_occupation(authorization: str = Header(...)):
             "title": matched_title,
             "code": occ_code,
         },
+        "occupation_code": occ_code,
+        "occupation_title": matched_title,
         "skills_overview": [
             {
                 "skill_name": s["skill"],
@@ -691,6 +716,9 @@ def match_occupation(authorization: str = Header(...)):
             s["skill"] for s in all_skill_data if not s["not_relevant"]
         ],
     }
+
+    _cache_set(_occupation_cache, user.id, result)
+    return result
 
 
 @app.post("/assessment/generate-assessment")
@@ -731,19 +759,23 @@ def api_generate_assessment(req: AssessmentRequest):
             detail=f"Skill '{req.skill_name}' is marked as NOT RELEVANT for '{occ_title}'",
         )
 
-    # Generate questions
-    try:
-        questions = generate_assessment(occ_title, relevant)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
+    # Return cached questions if available (same occupation + skill always yields equivalent questions)
+    q_cache_key = f"{req.occupation_code}:{req.skill_name.lower().strip()}"
+    cached_questions = _cache_get(_question_cache, q_cache_key)
+    if cached_questions is None:
+        try:
+            cached_questions = generate_assessment(occ_title, relevant)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
+        _cache_set(_question_cache, q_cache_key, cached_questions)
 
     return {
         "occupation_title": occ_title,
         "occupation_code": req.occupation_code,
         "skill_name": req.skill_name,
         "skill_data": relevant[0],
-        "questions": questions,
-        "total_questions": len(questions),
+        "questions": cached_questions,
+        "total_questions": len(cached_questions),
     }
 
 

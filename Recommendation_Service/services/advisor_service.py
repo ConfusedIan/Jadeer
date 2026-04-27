@@ -1,5 +1,7 @@
+import hashlib
 import json
 import logging
+import time
 from openai import AsyncOpenAI
 
 from config import NEBIUS_API_KEY, NEBIUS_BASE_URL, LLM_MODEL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -7,6 +9,9 @@ from config import NEBIUS_API_KEY, NEBIUS_BASE_URL, LLM_MODEL, SUPABASE_URL, SUP
 logger = logging.getLogger(__name__)
 
 _llm_client = AsyncOpenAI(base_url=NEBIUS_BASE_URL, api_key=NEBIUS_API_KEY)
+
+_analysis_cache: dict[str, dict] = {}
+_ANALYSIS_CACHE_TTL = 3600  # 1 hour
 
 
 def _format_profile(bundle: dict) -> str:
@@ -109,6 +114,12 @@ areas_for_development: 2–4 items. Only technologies explicitly in the job desc
 
 
 async def analyze_cv(user_id: str, bundle: dict, job_description: str) -> dict:
+    cache_key = f"{user_id}:{hashlib.sha256(job_description.encode()).hexdigest()[:16]}"
+    entry = _analysis_cache.get(cache_key)
+    if entry and time.time() - entry["ts"] < _ANALYSIS_CACHE_TTL:
+        logger.info("Cache hit for analyze_cv user=%s", user_id)
+        return entry["data"]
+
     profile_text = _format_profile(bundle)
 
     user_message = f"""Job Description:
@@ -150,6 +161,8 @@ Analyze the candidate's profile against the job description and return your reco
     except Exception as exc:
         logger.error("LLM call failed: %s", exc)
         raise
+
+    _analysis_cache[cache_key] = {"data": result, "ts": time.time()}
 
     # Save advisor report to Supabase (non-blocking)
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:

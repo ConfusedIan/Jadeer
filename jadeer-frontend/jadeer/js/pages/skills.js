@@ -161,16 +161,33 @@
   }
 
   async function startAssessment(skillName, existingSkill){
+    let cancelled = false;
+    const loadingBody = el(`
+      <div>
+        <div class="page-loader"><div class="spinner"></div></div>
+        <p class="muted" style="text-align:center;margin-top:12px;font-size:13px">This may take a moment on the first try.</p>
+        <div style="text-align:center;margin-top:16px">
+          <button class="btn btn-ghost btn-sm" id="cancel-assess-btn" data-i18n="cancel">Cancel</button>
+        </div>
+      </div>
+    `);
+    const loading = modal({
+      title: `${t('assessing')}: ${skillName}`,
+      body: loadingBody,
+    });
+    loadingBody.querySelector('#cancel-assess-btn')?.addEventListener('click', () => {
+      cancelled = true;
+      loading.close();
+    });
+
     let occupation = { code:'15-1252.00', title:'Software Developers' };
     try {
       const m = await api('/assessment/match-occupation',{method:'POST'});
       if(m && m.occupation_code){ occupation = { code:m.occupation_code, title:m.occupation_title||'' }; }
     } catch(_){}
 
-    const loading = modal({
-      title: `${t('assessing')}: ${skillName}`,
-      body: `<div class="page-loader"><div class="spinner"></div></div>`,
-    });
+    if(cancelled) return;
+
     let batch;
     try {
       batch = await api('/assessment/generate-assessment',{method:'POST',
@@ -180,6 +197,8 @@
       toast(e.message || 'Could not load assessment','error');
       return;
     }
+
+    if(cancelled) return;
     loading.close();
 
     // Backend returns 10 deterministic questions per call.
