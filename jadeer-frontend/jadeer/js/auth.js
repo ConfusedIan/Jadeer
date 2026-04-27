@@ -1,5 +1,17 @@
 (function(){
-  const { supabase, setToken, setUser, getUser, getToken } = window.JadeerAPI;
+  const { supabase, setToken, setRefreshToken, setUser, getUser, getToken } = window.JadeerAPI;
+
+  function _storeSession(data, fallbackName, fallbackRole){
+    setToken(data.access_token);
+    if(data.refresh_token) setRefreshToken(data.refresh_token);
+    const meta = (data.user && data.user.user_metadata) || {};
+    setUser({
+      id: data.user.id,
+      email: data.user.email,
+      full_name: meta.full_name || fallbackName || '',
+      role: meta.role || fallbackRole || 'candidate',
+    });
+  }
 
   async function signUp({ email, password, full_name, role }){
     const data = await supabase('/auth/v1/signup', {
@@ -7,8 +19,7 @@
     });
     // Supabase may return session directly, or require email confirm
     if(data.access_token){
-      setToken(data.access_token);
-      setUser({ id:data.user.id, email, full_name, role });
+      _storeSession(data, full_name, role);
     } else if(data.user){
       // No session yet (email confirm required) — try immediate login
       try { await signIn({ email, password, _afterSignupRole: role, _afterSignupName: full_name }); }
@@ -21,19 +32,12 @@
     const data = await supabase('/auth/v1/token?grant_type=password', {
       body: { email, password }
     });
-    setToken(data.access_token);
-    const meta = (data.user && data.user.user_metadata) || {};
-    setUser({
-      id: data.user.id,
-      email: data.user.email,
-      full_name: meta.full_name || _afterSignupName || '',
-      role: meta.role || _afterSignupRole || 'candidate',
-    });
+    _storeSession(data, _afterSignupName, _afterSignupRole);
     return data;
   }
 
   function signOut(){
-    setToken(null); setUser(null);
+    setToken(null); setRefreshToken(null); setUser(null);
     location.hash = '#/login';
   }
 
