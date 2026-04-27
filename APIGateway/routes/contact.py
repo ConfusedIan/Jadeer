@@ -14,11 +14,11 @@ router = APIRouter(prefix="/contact", tags=["contact"])
 
 
 class ContactForm(BaseModel):
-    name: str
     email: EmailStr
+    title: str
     message: str
 
-    @field_validator("name", "message")
+    @field_validator("title", "message")
     @classmethod
     def not_empty(cls, v: str) -> str:
         if not v.strip():
@@ -33,14 +33,13 @@ def send_contact(form: ContactForm):
         raise HTTPException(status_code=503, detail="Email service not configured")
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Jadeer Contact: {form.name}"
+    msg["Subject"] = f"Jadeer: {form.title}"
     msg["From"] = SMTP_USER
     msg["To"] = CONTACT_TO_EMAIL
     msg["Reply-To"] = form.email
 
     body = (
-        f"Name: {form.name}\n"
-        f"Email: {form.email}\n\n"
+        f"From: {form.email}\n\n"
         f"{form.message}"
     )
     msg.attach(MIMEText(body, "plain"))
