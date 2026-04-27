@@ -12,6 +12,7 @@ _llm_client = AsyncOpenAI(base_url=NEBIUS_BASE_URL, api_key=NEBIUS_API_KEY)
 
 _analysis_cache: dict[str, dict] = {}
 _ANALYSIS_CACHE_TTL = 3600  # 1 hour
+_CACHE_VERSION = "v2"  # bump this to invalidate all cached results after prompt changes
 
 
 def _format_profile(bundle: dict) -> str:
@@ -118,13 +119,13 @@ CONTENT RULES PER SECTION
 --------------------------
 relevant_skills: 3–5 items. Only skills the candidate actually has. Never invent skills.
 matching_experiences: 1–3 items. Only genuinely relevant roles. Skip unrelated or too-junior positions.
-recommended_certifications: 2–3 items. Real industry certifications only. Never recommend ones the candidate already holds.
-areas_for_development: 2–4 items. Only technologies explicitly in the job description that are absent from the candidate's profile. No generic soft skills.
+recommended_certifications: 0–3 items. Real industry certifications that this specific candidate does NOT already hold and that directly address a gap identified in the job description. If the candidate already holds all relevant certifications, return an empty array []. Cross-check every recommendation against the EXISTING CERTIFICATIONS list in the user message — any match is forbidden.
+areas_for_development: 0–4 items. Only technologies explicitly in the job description that are absent from the candidate's profile. No generic soft skills. Return [] if none.
 """
 
 
 async def analyze_cv(user_id: str, bundle: dict, job_description: str) -> dict:
-    cache_key = f"{user_id}:{hashlib.sha256(job_description.encode()).hexdigest()[:16]}"
+    cache_key = f"{_CACHE_VERSION}:{user_id}:{hashlib.sha256(job_description.encode()).hexdigest()[:16]}"
     entry = _analysis_cache.get(cache_key)
     if entry and time.time() - entry["ts"] < _ANALYSIS_CACHE_TTL:
         logger.info("Cache hit for analyze_cv user=%s", user_id)
@@ -132,13 +133,27 @@ async def analyze_cv(user_id: str, bundle: dict, job_description: str) -> dict:
 
     profile_text = _format_profile(bundle)
 
+    existing_cert_names = [
+        cert.get("certificate_name")
+        for cert in bundle.get("certificates", [])
+        if cert.get("certificate_name")
+    ]
+    existing_certs_block = (
+        "\n".join(f"  - {name}" for name in existing_cert_names)
+        if existing_cert_names
+        else "  (none)"
+    )
+
     user_message = f"""Job Description:
 {job_description}
 
 Candidate Profile:
 {profile_text}
 
-Analyze the candidate's profile against the job description and return your recommendations as JSON."""
+EXISTING CERTIFICATIONS — the candidate already holds every item below. You MUST NOT include any of these in recommended_certifications under any circumstances:
+{existing_certs_block}
+
+Analyze the candidate's profile against the job description and return your JSON recommendations. For recommended_certifications, only suggest certifications not listed above."""
 
     try:
         response = await _llm_client.chat.completions.create(

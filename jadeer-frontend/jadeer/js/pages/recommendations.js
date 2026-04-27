@@ -8,16 +8,16 @@
 
   const toArr = (v) => Array.isArray(v) ? v : [];
 
-  function section(title, iconEmoji, items, renderItem){
-    if(!items.length) return '';
+  function section(title, items, renderItem){
     return `
       <div class="card mt-lg">
         <div class="card-title">
-          <h3><span style="margin-inline-end:6px">${iconEmoji}</span>${title}</h3>
+          <h3>${title}</h3>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          ${items.map(renderItem).join('')}
-        </div>
+        ${items.length
+          ? `<div style="display:flex;flex-direction:column;gap:10px">${items.map(renderItem).join('')}</div>`
+          : `<p class="muted" style="font-size:13px;padding:4px 0">No matches found.</p>`
+        }
       </div>
     `;
   }
@@ -28,21 +28,15 @@
     const certs    = toArr(data.recommended_certifications);
     const gaps     = toArr(data.areas_for_development);
 
-    const any = relevant.length || exps.length || certs.length || gaps.length;
-    if(!any){
-      root.innerHTML = `<p class="muted" style="padding:20px;text-align:center" data-i18n="rec_no_results">No recommendations returned. Try a more detailed job description.</p>`;
-      return;
-    }
-
     const html = `
-      ${section(t('relevant_skills'), '🎯', relevant, (s)=>`
+      ${section(t('relevant_skills'), relevant, (s)=>`
         <div style="padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-inline-start:3px solid var(--success)">
           <strong>${s.name||''}</strong>
           ${s.description?`<p class="muted mt-sm" style="font-size:13px">${s.description}</p>`:''}
         </div>
       `)}
 
-      ${section(t('matching_experiences'), '💼', exps, (x)=>`
+      ${section(t('matching_experiences'), exps, (x)=>`
         <div style="padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-inline-start:3px solid var(--info)">
           <div class="row-between">
             <strong>${x.job_title||''} <span class="muted" style="font-weight:400">· ${x.company||''}</span></strong>
@@ -52,14 +46,14 @@
         </div>
       `)}
 
-      ${section(t('recommended_certifications'), '🏆', certs, (c)=>`
+      ${section(t('recommended_certifications'), certs, (c)=>`
         <div style="padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-inline-start:3px solid var(--accent)">
           <strong>${c.name||''}</strong>
           ${c.description?`<p class="muted mt-sm" style="font-size:13px">${c.description}</p>`:''}
         </div>
       `)}
 
-      ${section(t('areas_for_development'), '📚', gaps, (g)=>`
+      ${section(t('areas_for_development'), gaps, (g)=>`
         <div style="padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-inline-start:3px solid var(--warning)">
           <strong>${g.skill||''}</strong>
           ${g.description?`<p class="muted mt-sm" style="font-size:13px">${g.description}</p>`:''}
@@ -80,7 +74,7 @@
             <h3>Ready to apply?</h3>
             <p class="muted mt-sm" style="font-size:13px">Build a tailored CV with these recommendations pre-selected as your starting point.</p>
           </div>
-          <button class="btn btn-primary" id="create-cv-btn">📄 Create this CV</button>
+          <button class="btn btn-primary" id="create-cv-btn">Create this CV</button>
         </div>
       `;
       root.appendChild(cta);
@@ -171,7 +165,6 @@
         toast(friendly,'error', 7000);
         resultsBox.innerHTML = `
           <div class="card" style="padding:24px;text-align:center">
-            <div style="font-size:40px;margin-bottom:10px">⚠️</div>
             <h3 style="margin-bottom:6px">Could not analyze</h3>
             <p class="muted" style="max-width:520px;margin:0 auto">${friendly}</p>
             ${retryable ? `<button class="btn btn-primary mt-lg" id="rec-retry-btn">Try Again</button>` : ''}
