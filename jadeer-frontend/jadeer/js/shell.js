@@ -22,12 +22,14 @@
     ['#/recommendations', 'nav_recs',    'Recommendations'],
     ['#/cvs',             'nav_cvs',     'My CVs'],
     ['#/chats',           'nav_chats',   'Chats'],
+    ['#/contact',         'nav_contact', 'Contact Us'],
   ];
   const EMP_NAV = [
     ['#/employer',         null,          'Home'],
     ['#/employer/profile', 'nav_profile', 'Profile'],
     ['#/employer/search',  'nav_search',  'Search'],
     ['#/chats',            'nav_chats',   'Chats'],
+    ['#/contact',          'nav_contact', 'Contact Us'],
   ];
 
   /* Jadeer logo — uses the official SVG file */

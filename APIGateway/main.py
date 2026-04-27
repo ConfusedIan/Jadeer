@@ -25,6 +25,7 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(_JsonFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[_handler])
 
+from routes.contact import router as contact_router
 from routes.profile_proxy import router as profile_router
 from routes.assessment_proxy import router as assessment_router
 from routes.cv_proxy import router as cv_router
@@ -129,6 +130,7 @@ def whoami(request: Request):
     }
 
 # register routes
+app.include_router(contact_router)
 app.include_router(profile_router)
 app.include_router(assessment_router)
 app.include_router(cv_router)

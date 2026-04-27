@@ -12,7 +12,7 @@ async def log_requests(request: Request, call_next):
     print(f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms:.1f} ms)")
     return response
 
-PUBLIC_PATH_PREFIXES = ("/docs", "/openapi.json", "/redoc", "/health", "/status", "/dev", "/js", "/jadeer", "/css", "/assets", "/favicon", "/debug")
+PUBLIC_PATH_PREFIXES = ("/docs", "/openapi.json", "/redoc", "/health", "/status", "/dev", "/js", "/jadeer", "/css", "/assets", "/favicon", "/debug", "/contact")
 PUBLIC_PATH_SUFFIXES = ("/health",)
 
 async def auth_guard(request: Request, call_next):

@@ -17,3 +17,10 @@ REQUEST_TIMEOUT_SECONDS = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "90"))
 # CORS — comma-separated list of allowed origins, e.g. "http://localhost:3000,https://app.example.com"
 _cors_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
 CORS_ORIGINS = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+
+# Contact-form email settings
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+CONTACT_TO_EMAIL = os.getenv("CONTACT_TO_EMAIL", "pro.jadeer@gmail.com")
