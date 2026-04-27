@@ -15,6 +15,24 @@
   // Single in-flight refresh promise — prevents parallel refresh races
   let _refreshPromise = null;
 
+  // In-memory GET cache — keyed by URL, invalidated on any mutation
+  const _cache = new Map();
+  const _CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  function _cacheGet(url) {
+    const entry = _cache.get(url);
+    if (entry && Date.now() - entry.ts < _CACHE_TTL_MS) return entry.data;
+    return null;
+  }
+
+  function _cacheSet(url, data) {
+    _cache.set(url, { data, ts: Date.now() });
+  }
+
+  function _cacheClear() {
+    _cache.clear();
+  }
+
   async function _attemptRefresh(){
     const refreshToken = getRefreshToken();
     if(!refreshToken) return false;
@@ -105,6 +123,15 @@
       url += (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
     }
 
+    // Serve GET responses from in-memory cache to avoid re-fetching on page navigation.
+    // Any mutation (POST/PUT/DELETE) clears the entire cache so stale data is never shown.
+    const isMutation = method !== 'GET';
+    if(isMutation) _cacheClear();
+    if(!isMutation && !noCache && !blob){
+      const cached = _cacheGet(url);
+      if(cached !== null) return cached;
+    }
+
     const headers = _buildHeaders(auth, noCache);
     let res = await _buildAndFetch(url, method, headers, body, blob, noCache);
 
@@ -135,9 +162,12 @@
     }
     if(blob) return res.blob();
     const ct = res.headers.get('content-type')||'';
-    if(ct.includes('application/json')) return res.json();
-    if(ct.includes('application/pdf')) return res.blob();
-    return res.text();
+    let result;
+    if(ct.includes('application/json')) result = await res.json();
+    else if(ct.includes('application/pdf')) result = await res.blob();
+    else result = await res.text();
+    if(!isMutation && !noCache && !blob) _cacheSet(url, result);
+    return result;
   }
 
   // Supabase direct calls

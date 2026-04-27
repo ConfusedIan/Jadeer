@@ -48,9 +48,19 @@ def _format_profile(bundle: dict) -> str:
 
     certificates = bundle.get("certificates", [])
     if certificates:
-        lines.append("\nCertificates:")
+        cert_lines = []
         for cert in certificates:
-            lines.append(f"  - {cert.get('certificate_name', 'N/A')} by {cert.get('issuer', 'N/A')}")
+            cert_name = cert.get('certificate_name') or None
+            if not cert_name:
+                continue
+            issuer = cert.get('issuer') or cert.get('issuer_id') or None
+            if issuer and issuer != 'custom':
+                cert_lines.append(f"  - {cert_name} by {issuer}")
+            else:
+                cert_lines.append(f"  - {cert_name}")
+        if cert_lines:
+            lines.append("\nCertificates (already held — do NOT recommend these):")
+            lines.extend(cert_lines)
 
     skills = bundle.get("skills", [])
     if skills:
