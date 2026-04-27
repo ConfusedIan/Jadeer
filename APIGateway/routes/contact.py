@@ -3,7 +3,8 @@ import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr, field_validator
+import re
+from pydantic import BaseModel, field_validator
 
 from config import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, CONTACT_TO_EMAIL
@@ -13,10 +14,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/contact", tags=["contact"])
 
 
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
 class ContactForm(BaseModel):
-    email: EmailStr
+    email: str
     title: str
     message: str
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v: str) -> str:
+        v = v.strip()
+        if not _EMAIL_RE.match(v):
+            raise ValueError("Invalid email address")
+        return v
 
     @field_validator("title", "message")
     @classmethod
