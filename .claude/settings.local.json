@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(dir \"C:\\\\Users\\\\llaay\\\\OneDrive\\\\Desktop\\\\Jadeer\")",
-      "Bash(xargs cat *)"
-    ]
-  }
-}
