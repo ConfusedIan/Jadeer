@@ -25,6 +25,7 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(_JsonFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[_handler])
 
+from routes.contact import router as contact_router
 from routes.profile_proxy import router as profile_router
 from routes.assessment_proxy import router as assessment_router
 from routes.cv_proxy import router as cv_router
@@ -81,6 +82,43 @@ app.middleware("http")(auth_guard)
 def health():
     return {"status": "ok", "service": "api-gateway"}
 
+@app.get("/debug/services", tags=["system"])
+def debug_services():
+    import requests as _req
+    from services.service_registry import SERVICES
+    results = {}
+    for name, url in SERVICES.items():
+        try:
+            r = _req.get(f"{url}/health", timeout=5)
+            results[name] = {"url": url, "status": r.status_code}
+        except Exception as e:
+            results[name] = {"url": url, "error": str(e)}
+    return results
+
+@app.get("/debug/profile-test", tags=["system"])
+def debug_profile_test():
+    import requests as _req
+    from services.service_registry import SERVICES
+    url = f"{SERVICES['profile']}/profile/me"
+    try:
+        r = _req.get(url, headers={"X-User-Id": "debug-test"}, timeout=10)
+        return {"url": url, "status": r.status_code, "body": r.text[:500]}
+    except Exception as e:
+        return {"url": url, "error": str(e)}
+
+@app.get("/debug/supabase-test", tags=["system"])
+def debug_supabase_test():
+    import requests as _req
+    import os
+    url = os.getenv("SUPABASE_URL", "NOT SET")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "NOT SET")
+    return {
+        "supabase_url": url,
+        "key_length": len(key),
+        "key_preview": key[:30] + "..." + key[-10:] if len(key) > 40 else key,
+        "key_dot_count": key.count("."),
+    }
+
 @app.get("/whoami", tags=["system"])
 def whoami(request: Request):
     user = getattr(request.state, "user", None) or {}
@@ -92,6 +130,7 @@ def whoami(request: Request):
     }
 
 # register routes
+app.include_router(contact_router)
 app.include_router(profile_router)
 app.include_router(assessment_router)
 app.include_router(cv_router)

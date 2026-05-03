@@ -1,0 +1,100 @@
+// Extra translation strings for Phase 2A pages
+(function(){
+  const extra = {
+    en:{
+      // Onboarding (Fig 4.4)
+      complete_your_profile:'Complete Your Profile',
+      ob_sub:"Let's set up your candidate profile to help employers find you",
+      professional_headline:'Professional Headline',
+      headline_ph:'e.g., Junior Frontend Developer',
+      location:'Location', location_ph:'e.g., Riyadh, Saudi Arabia',
+      major:'Major / Specialization', select_major:'Select your specialization',
+      graduation_year:'Graduation Year', year_ph:'e.g., 2024',
+      years_experience:'Years of Experience', select_level:'Select experience level',
+      preferred_job:'Preferred Job Type', select_job_type:'Select job type',
+      short_bio:'Short Bio / About Me', bio_ph:'Tell us a bit about yourself and your career goals…',
+      save:'Save', cancel:'Cancel',
+      // Profile view (Fig 4.6)
+      candidate_profile:'Candidate Profile',
+      manage_profile_info:'Manage your profile information',
+      edit_profile:'Edit Profile',
+      work_experience:'Work Experience', education:'Education',
+      top_skills:'Top Skills', view_all_skills:'View All Skills',
+      view_all_certs:'View All Certificates',
+      recent_cvs:'Recent CVs', view_all_cvs:'View All CVs',
+      phone:'Phone', bio:'Bio',
+      present:'Present',
+      no_experience:'No work experience yet.',
+      no_education:'No education entries yet.',
+      no_certs:'No certificates yet.',
+      no_skills:'No skills added yet.',
+      no_cvs:'No CVs generated yet.',
+      // Profile edit (Fig 4.7)
+      edit_your_profile:'Edit Your Profile',
+      save_profile:'Save Profile',
+      personal_info:'Personal Information',
+      phone_number:'Phone Number', professional_bio:'Professional Bio',
+      bio_about_ph:'Tell us about yourself…',
+      add_experience:'+ Add Experience',
+      add_education:'+ Add Education',
+      job_title:'Job Title', company:'Company',
+      start_date:'Start Date', end_date:'End Date',
+      description:'Description',
+      desc_ph:'Describe your responsibilities and achievements…',
+      institution:'Institution', degree:'Degree', field_of_study:'Field of Study',
+      linkedin:'LinkedIn URL',
+      saving:'Saving…',
+      saved:'Profile saved',
+    },
+    ar:{
+      complete_your_profile:'أكمل ملفك الشخصي',
+      ob_sub:'لنكمل إعداد ملفك الشخصي لمساعدة أصحاب العمل في إيجادك',
+      professional_headline:'العنوان المهني',
+      headline_ph:'مثال: مطور واجهات مبتدئ',
+      location:'الموقع', location_ph:'مثال: الرياض، المملكة العربية السعودية',
+      major:'التخصص', select_major:'اختر تخصصك',
+      graduation_year:'سنة التخرج', year_ph:'مثال: 2024',
+      years_experience:'سنوات الخبرة', select_level:'اختر مستوى الخبرة',
+      preferred_job:'نوع الوظيفة المفضل', select_job_type:'اختر نوع الوظيفة',
+      short_bio:'نبذة مختصرة عنك', bio_ph:'أخبرنا قليلاً عن نفسك وأهدافك المهنية…',
+      save:'حفظ', cancel:'إلغاء',
+      candidate_profile:'ملف المرشح',
+      manage_profile_info:'أدر معلومات ملفك الشخصي',
+      edit_profile:'تعديل الملف',
+      work_experience:'الخبرة العملية', education:'التعليم',
+      top_skills:'أهم المهارات', view_all_skills:'عرض جميع المهارات',
+      view_all_certs:'عرض جميع الشهادات',
+      recent_cvs:'آخر السير الذاتية', view_all_cvs:'عرض جميع السير',
+      phone:'الهاتف', bio:'نبذة',
+      present:'حتى الآن',
+      no_experience:'لا توجد خبرات عملية بعد.',
+      no_education:'لا توجد بيانات تعليمية بعد.',
+      no_certs:'لا توجد شهادات بعد.',
+      no_skills:'لم تُضَف مهارات بعد.',
+      no_cvs:'لم يتم إنشاء أي سير ذاتية بعد.',
+      edit_your_profile:'عدّل ملفك الشخصي',
+      save_profile:'حفظ الملف',
+      personal_info:'المعلومات الشخصية',
+      phone_number:'رقم الهاتف', professional_bio:'النبذة المهنية',
+      bio_about_ph:'أخبرنا عن نفسك…',
+      add_experience:'+ إضافة خبرة',
+      add_education:'+ إضافة تعليم',
+      job_title:'المسمى الوظيفي', company:'الشركة',
+      start_date:'تاريخ البداية', end_date:'تاريخ النهاية',
+      description:'الوصف',
+      desc_ph:'اوصف مسؤولياتك وإنجازاتك…',
+      institution:'المؤسسة', degree:'الدرجة', field_of_study:'مجال الدراسة',
+      linkedin:'رابط LinkedIn',
+      saving:'جار الحفظ…',
+      saved:'تم حفظ الملف',
+    }
+  };
+  // merge into existing dict — we rely on JadeerI18n's closure, so expose via monkey-patch:
+  const orig = window.JadeerI18n.t;
+  window.JadeerI18n.t = function(key){
+    const lang = window.JadeerI18n.getLang();
+    if(extra[lang] && extra[lang][key]) return extra[lang][key];
+    if(extra.en[key]) return extra.en[key];
+    return orig(key);
+  };
+})();

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import logging
@@ -49,22 +50,36 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"error": "Internal server error", "code": 500})
+    return JSONResponse(status_code=500, content={"error": str(exc), "type": type(exc).__name__, "code": 500})
 
 @app.get("/health", tags=["system"])
 def health():
     return {"status": "ok", "service": "profile"}
 
+@app.get("/debug/env", tags=["system"])
+def debug_env():
+    import os
+    url = os.getenv("SUPABASE_URL", "NOT SET")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "NOT SET")
+    return {
+        "supabase_url": url,
+        "key_length": len(key),
+        "key_dot_count": key.count("."),
+        "key_preview": key[:20] + "..." + key[-10:] if len(key) > 30 else key,
+    }
+
 @app.get("/profile/me/bundle", tags=["profile"])
-def get_profile_bundle(x_user_id: str = Header(default=None, alias="X-User-Id")):
+async def get_profile_bundle(x_user_id: str = Header(default=None, alias="X-User-Id")):
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing X-User-Id")
 
-    profile_res = supabase.table("profiles").select("*").eq("id", x_user_id).maybe_single().execute()
-    experiences_res = supabase.table("experiences").select("*").eq("candidate_id", x_user_id).execute()
-    education_res = supabase.table("education").select("*").eq("candidate_id", x_user_id).execute()
-    certificates_res = supabase.table("certificates").select("*").eq("candidate_id", x_user_id).execute()
-    skills_res = supabase.table("skills").select("*").eq("candidate_id", x_user_id).execute()
+    profile_res, experiences_res, education_res, certificates_res, skills_res = await asyncio.gather(
+        asyncio.to_thread(lambda: supabase.table("profiles").select("*").eq("id", x_user_id).maybe_single().execute()),
+        asyncio.to_thread(lambda: supabase.table("experiences").select("*").eq("candidate_id", x_user_id).execute()),
+        asyncio.to_thread(lambda: supabase.table("education").select("*").eq("candidate_id", x_user_id).execute()),
+        asyncio.to_thread(lambda: supabase.table("certificates").select("*").eq("candidate_id", x_user_id).execute()),
+        asyncio.to_thread(lambda: supabase.table("skills").select("*").eq("candidate_id", x_user_id).execute()),
+    )
 
     return {
         "profile": profile_res.data or {},

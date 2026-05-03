@@ -4,6 +4,7 @@ import json
 import re
 import io
 import csv
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -105,6 +106,23 @@ def get_occupations() -> dict:
 OCC_MAP = get_occupations()
 OCC_TITLES = list(OCC_MAP.keys())
 
+# ── In-memory caches ─────────────────────────────────────────────────────────
+_CACHE_TTL = 86400  # 24 hours
+
+_occupation_cache: dict[str, dict] = {}   # user_id → {data, ts}
+_question_cache: dict[str, dict] = {}     # "occ_code:skill_name" → {data, ts}
+
+
+def _cache_get(store: dict, key: str):
+    entry = store.get(key)
+    if entry and time.time() - entry["ts"] < _CACHE_TTL:
+        return entry["data"]
+    return None
+
+
+def _cache_set(store: dict, key: str, data):
+    store[key] = {"data": data, "ts": time.time()}
+
 
 def get_skill_data(occ_code: str, selected_skills: list[str]) -> list[dict]:
     """Get importance/level data for selected skills and occupation from O*NET."""
@@ -166,15 +184,15 @@ def calc_pass_threshold(skill_data: list[dict]) -> tuple[int, str]:
     """Determine pass threshold based on skill importance."""
     relevant = [s for s in skill_data if not s["not_relevant"]]
     if not relevant:
-        return 3, "Default threshold (no relevant skill data)"
+        return 6, "Default threshold (no relevant skill data)"
 
     avg_imp = sum(s["standardized_importance"] for s in relevant) / len(relevant)
     if avg_imp >= 50:
-        return 4, f"High threshold (4/5) — standardized importance is high ({avg_imp:.0f})"
+        return 8, f"High threshold (8/10) — standardized importance is high ({avg_imp:.0f})"
     elif avg_imp >= 25:
-        return 3, f"Standard threshold (3/5) — standardized importance is moderate ({avg_imp:.0f})"
+        return 6, f"Standard threshold (6/10) — standardized importance is moderate ({avg_imp:.0f})"
     else:
-        return 2, f"Low threshold (2/5) — standardized importance is low ({avg_imp:.0f})"
+        return 4, f"Low threshold (4/10) — standardized importance is low ({avg_imp:.0f})"
 
 
 def save_assessment_result(
@@ -420,7 +438,7 @@ def _sanitize_json(s: str) -> str:
 
 
 def generate_assessment(occupation_title: str, skill_data: list[dict]) -> list[dict]:
-    """Generate 5 scenario-based MCQ questions using the Nebius API (with retry)."""
+    """Generate 10 scenario-based MCQ questions using the Nebius API (with retry)."""
     client = get_llm_client()
 
     relevant_skills = [s for s in skill_data if not s["not_relevant"]]
@@ -437,14 +455,14 @@ def generate_assessment(occupation_title: str, skill_data: list[dict]) -> list[d
     ])
 
     skill_rule = (
-        "ALL 5 questions MUST target the single skill provided above. Do NOT invent or use any other skills."
+        "ALL 10 questions MUST target the single skill provided above. Do NOT invent or use any other skills."
         if len(relevant_skills) == 1
         else "Cover at least 2 different skills from the list above. Do NOT invent skills outside the provided list."
     )
 
     system_prompt = f"""You are an expert O*NET-based assessment designer.
 
-Create exactly 5 SCENARIO-BASED multiple-choice questions for the occupation: "{occupation_title}"
+Create exactly 10 SCENARIO-BASED multiple-choice questions for the occupation: "{occupation_title}"
 
 SKILLS DATA (from official O*NET database):
 {skills_info}
@@ -494,7 +512,7 @@ Each element must have this exact schema:
                 temperature=0.7,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Generate the 5-question assessment for {occupation_title}. Respond with ONLY a JSON array, no other text."},
+                    {"role": "user", "content": f"Generate the 10-question assessment for {occupation_title}. Respond with ONLY a JSON array, no other text."},
                 ],
             )
 
@@ -648,6 +666,11 @@ def match_occupation(authorization: str = Header(...)):
             detail="No profile data found. Please complete your Jadeer profile first.",
         )
 
+    # Return cached occupation match if available
+    cached = _cache_get(_occupation_cache, user.id)
+    if cached:
+        return cached
+
     # LLM match to O*NET occupation
     matched_title = match_occupation_from_summary(user_summary)
     occ_code = OCC_MAP.get(matched_title)
@@ -665,7 +688,7 @@ def match_occupation(authorization: str = Header(...)):
     priority_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
     all_skill_data.sort(key=lambda s: (priority_order.get(s["priority"], 3), -s["standardized_importance"]))
 
-    return {
+    result = {
         "user_id": user.id,
         "user_email": user.email,
         "user_summary_sent_to_llm": user_summary,
@@ -673,6 +696,8 @@ def match_occupation(authorization: str = Header(...)):
             "title": matched_title,
             "code": occ_code,
         },
+        "occupation_code": occ_code,
+        "occupation_title": matched_title,
         "skills_overview": [
             {
                 "skill_name": s["skill"],
@@ -691,6 +716,9 @@ def match_occupation(authorization: str = Header(...)):
             s["skill"] for s in all_skill_data if not s["not_relevant"]
         ],
     }
+
+    _cache_set(_occupation_cache, user.id, result)
+    return result
 
 
 @app.post("/assessment/generate-assessment")
@@ -731,19 +759,23 @@ def api_generate_assessment(req: AssessmentRequest):
             detail=f"Skill '{req.skill_name}' is marked as NOT RELEVANT for '{occ_title}'",
         )
 
-    # Generate questions
-    try:
-        questions = generate_assessment(occ_title, relevant)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
+    # Return cached questions if available (same occupation + skill always yields equivalent questions)
+    q_cache_key = f"{req.occupation_code}:{req.skill_name.lower().strip()}"
+    cached_questions = _cache_get(_question_cache, q_cache_key)
+    if cached_questions is None:
+        try:
+            cached_questions = generate_assessment(occ_title, relevant)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
+        _cache_set(_question_cache, q_cache_key, cached_questions)
 
     return {
         "occupation_title": occ_title,
         "occupation_code": req.occupation_code,
         "skill_name": req.skill_name,
         "skill_data": relevant[0],
-        "questions": questions,
-        "total_questions": len(questions),
+        "questions": cached_questions,
+        "total_questions": len(cached_questions),
     }
 
 
@@ -849,7 +881,7 @@ def api_full_assessment(req: FullAssessmentRequest, authorization: Optional[str]
     """
     Run the full assessment pipeline in one call.
 
-    - If `answers` is NOT provided: generates and returns 5 MCQ questions.
+    - If `answers` is NOT provided: generates and returns 10 MCQ questions.
     - If `answers` IS provided: generates questions, evaluates answers,
       and returns the complete assessment result with score and pass/fail.
 

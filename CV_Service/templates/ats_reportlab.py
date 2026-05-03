@@ -10,6 +10,8 @@ _GREY = Color(0.5, 0.5, 0.5)
 LEFT, RIGHT, TOP, BOTTOM = 50, 50, 60, 50
 FONT, FONT_BOLD = "Helvetica", "Helvetica-Bold"
 
+DEFAULT_SECTION_ORDER = ["bio", "experience", "education", "certificates", "skills"]
+
 
 def _wrap_text(
     c,
@@ -55,6 +57,7 @@ def generate_cv_pdf(
     include_scores: bool,
     include_verified_badges: bool,
     skill_threshold: float = 70.0,
+    section_order: list | None = None,
 ) -> bytes:
     profile = data.get("profile", {}) or {}
     experiences = data.get("experiences", []) or []
@@ -74,7 +77,7 @@ def generate_cv_pdf(
             c.showPage()
             y = h - TOP
 
-    def section(title: str):
+    def draw_section_title(title: str):
         nonlocal y
         new_page_if_needed(140)
         y -= 6
@@ -85,53 +88,51 @@ def generate_cv_pdf(
         c.line(LEFT, y, LEFT + max_width, y)
         y -= 14
 
-    # ── Header ───────────────────────────────────────────────────────────────
+    # ── Header: name + contact ────────────────────────────────────────────────
     full_name = profile.get("full_name") or "Unnamed Candidate"
     c.setFont(FONT_BOLD, 18)
     c.drawString(LEFT, y, full_name)
     y -= 10
 
-    # Divider line under name (clean/pro feel)
     c.setLineWidth(1)
     c.line(LEFT, y, LEFT + max_width, y)
     y -= 12
 
     meta_parts = []
-    if profile.get("email"):
-        meta_parts.append(profile["email"])
-    if profile.get("location"):
-        meta_parts.append(profile["location"])
-    if profile.get("phone"):
-        meta_parts.append(profile["phone"])
-    if profile.get("linkedin_url"):
-        meta_parts.append(profile["linkedin_url"])
+    if profile.get("email"):        meta_parts.append(profile["email"])
+    if profile.get("location"):     meta_parts.append(profile["location"])
+    if profile.get("phone"):        meta_parts.append(profile["phone"])
+    if profile.get("linkedin_url"): meta_parts.append(profile["linkedin_url"])
     meta = " | ".join(meta_parts)
-
     if meta:
         c.setFont(FONT, 10)
         y = _wrap_text(c, meta, LEFT, y, max_width, FONT, 10, 12)
         y -= 6
 
-    # ── Summary ──────────────────────────────────────────────────────────────
     bio = profile.get("bio")
-    if bio:
-        section("Summary")
+
+    # ── Section renderers ─────────────────────────────────────────────────────
+
+    def render_bio():
+        nonlocal y
+        if not bio:
+            return
+        draw_section_title("Summary")
         y = _wrap_text(c, bio, LEFT, y, max_width, FONT, 10, 13)
 
-    # ── Experience ───────────────────────────────────────────────────────────
-    if include_experience and experiences:
-        section("Experience")
+    def render_experience():
+        nonlocal y
+        if not (include_experience and experiences):
+            return
+        draw_section_title("Experience")
         for exp in experiences:
             new_page_if_needed(170)
-
             title = exp.get("job_title") or "Role"
             company = exp.get("company") or "Company"
 
-            # Left: title/company
             c.setFont(FONT_BOLD, 11)
             c.drawString(LEFT, y, f"{title} — {company}")
 
-            # Right: dates (aligned to the right edge)
             dates = " - ".join(
                 [d for d in [_date_only(exp.get("start_date")), _date_only(exp.get("end_date"))] if d]
             )
@@ -141,32 +142,28 @@ def generate_cv_pdf(
                 c.drawString(LEFT + max_width - date_width, y, dates)
 
             y -= 14
-
             desc = exp.get("description") or ""
             if desc:
-                # Bullet formatting
                 y = _wrap_text(c, "• " + desc, LEFT + 8, y, max_width - 8, FONT, 10, 13)
                 y -= 4
-
             y -= 6
 
-    # ── Education ────────────────────────────────────────────────────────────
-    if include_education and education:
-        section("Education")
-        seen_edu = set()
-        deduped_education = []
+    def render_education():
+        nonlocal y
+        if not (include_education and education):
+            return
+        draw_section_title("Education")
+        seen = set()
         for edu in education:
             key = (edu.get("degree"), edu.get("institution"), edu.get("field_of_study"))
-            if key not in seen_edu:
-                seen_edu.add(key)
-                deduped_education.append(edu)
-        for edu in deduped_education:
+            if key in seen:
+                continue
+            seen.add(key)
             new_page_if_needed(140)
 
             degree = edu.get("degree") or "Degree"
             inst = edu.get("institution") or "Institution"
             field = edu.get("field_of_study")
-
             line = f"{degree} — {inst}"
             if field:
                 line += f" ({field})"
@@ -184,9 +181,11 @@ def generate_cv_pdf(
 
             y -= 16
 
-    # ── Certificates ─────────────────────────────────────────────────────────
-    if include_certificates and certs:
-        section("Certificates")
+    def render_certificates():
+        nonlocal y
+        if not (include_certificates and certs):
+            return
+        draw_section_title("Certificates")
         for cert in certs:
             new_page_if_needed(140)
 
@@ -206,40 +205,48 @@ def generate_cv_pdf(
                 badge_color = _GREEN if is_verified else _GREY
                 badge_width = stringWidth(badge_text, FONT, 9) + 4
 
-                # Draw badge right-aligned
                 c.setFont(FONT, 9)
                 c.setFillColor(badge_color)
                 c.drawString(LEFT + max_width - badge_width, y, badge_text)
                 c.setFillColor(black)
 
-                # Draw cert text constrained so it doesn't overlap badge
                 avail_width = max_width - badge_width - 12
                 y = _wrap_text(c, "• " + cert_line, LEFT + 8, y, avail_width, FONT, 10, 12)
             else:
-                c.setFont(FONT, 10)
                 y = _wrap_text(c, "• " + cert_line, LEFT + 8, y, max_width - 8, FONT, 10, 12)
 
         y -= 6
 
-    # ── Skills ───────────────────────────────────────────────────────────────
-    if include_skills and skills:
-        section("Skills")
-
+    def render_skills():
+        nonlocal y
+        if not (include_skills and skills):
+            return
+        draw_section_title("Skills")
         items = []
         for s in skills:
             name = s.get("custom_skill_name") or s.get("name") or "Skill"
             score = s.get("score")
             if include_scores and score is not None:
                 try:
-                    score_int = int(score)
-                    items.append(f"{name} ({score_int}/100)")
+                    items.append(f"{name} ({int(score)}/100)")
                 except Exception:
                     items.append(name)
             else:
                 items.append(name)
+        y = _wrap_text(c, " • ".join(items), LEFT, y, max_width, FONT, 10, 13)
 
-        skills_text = " \u2022 ".join(items)
-        y = _wrap_text(c, skills_text, LEFT, y, max_width, FONT, 10, 13)
+    # ── Dispatch in requested order ───────────────────────────────────────────
+    dispatch = {
+        "bio":          render_bio,
+        "experience":   render_experience,
+        "education":    render_education,
+        "certificates": render_certificates,
+        "skills":       render_skills,
+    }
+    for key in (section_order or DEFAULT_SECTION_ORDER):
+        fn = dispatch.get(key)
+        if fn:
+            fn()
 
     c.showPage()
     c.save()

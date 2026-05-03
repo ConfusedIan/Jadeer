@@ -1,0 +1,37 @@
+/* ===== Dark theme (default) ===== */
+:root{
+  --bg:#0a0a0f; --surface:#12121a; --surface2:#1a1a26; --surface3:#22222e;
+  --border:#2a2a3d; --border2:#3a3a50;
+  --accent:#7c5cfc; --accent2:#c084fc; --accent-glow:rgba(124,92,252,.3);
+  --text:#f0f0f8; --text2:#9090b0; --text3:#6b6b85;
+  --success:#22d3a0; --success-bg:rgba(34,211,160,.12);
+  --danger:#f87171;  --danger-bg:rgba(248,113,113,.12);
+  --warning:#fbbf24; --warning-bg:rgba(251,191,36,.12);
+  --info:#60a5fa;    --info-bg:rgba(96,165,250,.12);
+  --overlay:rgba(0,0,0,.65);
+  --radius:14px; --radius-sm:8px; --radius-lg:20px;
+  --shadow:0 4px 20px rgba(0,0,0,.3);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.5);
+  --font-ar:'Tajawal',system-ui,sans-serif;
+  --font-en:'Inter','Tajawal',system-ui,sans-serif;
+  --font:var(--font-en);
+  --mono:'DM Mono',ui-monospace,monospace;
+  --topbar-h:64px; --sidebar-w:240px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+[dir="rtl"]{ --font:var(--font-ar); }
+
+/* ===== Light theme ===== */
+[data-theme="light"]{
+  --bg:#f2f4fb; --surface:#ffffff; --surface2:#eef0f9; --surface3:#e4e8f5;
+  --border:#dde2f0; --border2:#c8d0e8;
+  --accent:#7c5cfc; --accent2:#5b3fd4; --accent-glow:rgba(124,92,252,.10);
+  --text:#14142a; --text2:#484870; --text3:#7676a4;
+  --success:#059669; --success-bg:rgba(5,150,105,.10);
+  --danger:#dc2626;  --danger-bg:rgba(220,38,38,.10);
+  --warning:#d97706; --warning-bg:rgba(217,119,6,.10);
+  --info:#2563eb;    --info-bg:rgba(37,99,235,.10);
+  --overlay:rgba(0,0,0,.38);
+  --shadow:0 1px 3px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.07);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.06),0 14px 36px rgba(0,0,0,.10);
+}

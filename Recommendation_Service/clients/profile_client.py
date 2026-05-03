@@ -6,6 +6,8 @@ from config import PROFILE_SERVICE_URL, HTTP_TIMEOUT_SECONDS
 
 logger = logging.getLogger(__name__)
 
+_http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS)
+
 
 def _as_list(payload: Any) -> list:
     if isinstance(payload, list):
@@ -27,51 +29,51 @@ def _as_dict(payload: Any) -> dict:
     return {}
 
 
+async def _fetch_json(path: str, headers: dict) -> Any:
+    r = await _http_client.get(f"{PROFILE_SERVICE_URL}{path}", headers=headers)
+    r.raise_for_status()
+    return r.json()
+
+
 async def get_profile_bundle(user_id: str) -> dict:
     headers = {"X-User-Id": user_id}
 
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
-        try:
-            r = await client.get(f"{PROFILE_SERVICE_URL}/profile/me/bundle", headers=headers)
-            r.raise_for_status()
-            data = r.json()
-            return {
-                "profile": _as_dict(data.get("profile", {})),
-                "experiences": _as_list(data.get("experiences", [])),
-                "education": _as_list(data.get("education", [])),
-                "certificates": _as_list(data.get("certificates", [])),
-                "skills": _as_list(data.get("skills", [])),
-            }
-        except Exception as exc:
-            logger.warning("Bundle endpoint failed for user %s (%s), falling back to individual calls", user_id, exc)
-
-        bundle: dict[str, Any] = {
-            "profile": {},
-            "experiences": [],
-            "education": [],
-            "certificates": [],
-            "skills": [],
+    try:
+        r = await _http_client.get(f"{PROFILE_SERVICE_URL}/profile/me/bundle", headers=headers)
+        r.raise_for_status()
+        data = r.json()
+        return {
+            "profile": _as_dict(data.get("profile", {})),
+            "experiences": _as_list(data.get("experiences", [])),
+            "education": _as_list(data.get("education", [])),
+            "certificates": _as_list(data.get("certificates", [])),
+            "skills": _as_list(data.get("skills", [])),
         }
+    except Exception as exc:
+        logger.warning("Bundle endpoint failed for user %s (%s), falling back to individual calls", user_id, exc)
 
-        async def fetch_json(path: str) -> Any:
-            r = await client.get(f"{PROFILE_SERVICE_URL}{path}", headers=headers)
-            r.raise_for_status()
-            return r.json()
+    bundle: dict[str, Any] = {
+        "profile": {},
+        "experiences": [],
+        "education": [],
+        "certificates": [],
+        "skills": [],
+    }
 
+    try:
+        bundle["profile"] = _as_dict(await _fetch_json("/profile/me", headers))
+    except Exception as exc:
+        logger.warning("Failed to fetch /profile/me for user %s: %s", user_id, exc)
+
+    for key, path in [
+        ("experiences", "/profile/me/experiences"),
+        ("education", "/profile/me/education"),
+        ("certificates", "/profile/me/certificates"),
+        ("skills", "/profile/me/skills"),
+    ]:
         try:
-            bundle["profile"] = _as_dict(await fetch_json("/profile/me"))
+            bundle[key] = _as_list(await _fetch_json(path, headers))
         except Exception as exc:
-            logger.warning("Failed to fetch /profile/me for user %s: %s", user_id, exc)
+            logger.warning("Failed to fetch %s for user %s: %s", path, user_id, exc)
 
-        for key, path in [
-            ("experiences", "/profile/me/experiences"),
-            ("education", "/profile/me/education"),
-            ("certificates", "/profile/me/certificates"),
-            ("skills", "/profile/me/skills"),
-        ]:
-            try:
-                bundle[key] = _as_list(await fetch_json(path))
-            except Exception as exc:
-                logger.warning("Failed to fetch %s for user %s: %s", path, user_id, exc)
-
-        return bundle
+    return bundle

@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from services.service_registry import SERVICES
@@ -24,6 +24,12 @@ class CVRequest(BaseModel):
     include_verified_badges: bool = True
     custom_bio: Optional[str] = None
     experience_overrides: Optional[Dict[int, str]] = None
+    experience_desc_overrides: Optional[Dict[str, str]] = None
+    selected_experience_ids: Optional[List[str]] = None
+    selected_education_ids: Optional[List[str]] = None
+    selected_certificate_ids: Optional[List[str]] = None
+    selected_skill_ids: Optional[List[str]] = None
+    section_order: Optional[List[str]] = None
     skill_threshold: float = 70.0
     save_to_history: bool = False
     cv_name: Optional[str] = None
