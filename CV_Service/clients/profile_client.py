@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 import httpx
+from fastapi import HTTPException
 
 from config import PROFILE_SERVICE_URL, HTTP_TIMEOUT_SECONDS
 
@@ -63,10 +64,18 @@ async def get_profile_bundle(user_id: str) -> dict:
             r.raise_for_status()
             return r.json()
 
+        service_reachable = False
         try:
             bundle["profile"] = _as_dict(await fetch_json("/profile/me"))
+            service_reachable = True
+        except httpx.HTTPStatusError as exc:
+            service_reachable = True  # service responded, user just has no profile yet
+            logger.warning("Failed to fetch /profile/me for user %s: %s", user_id, exc)
         except Exception as exc:
             logger.warning("Failed to fetch /profile/me for user %s: %s", user_id, exc)
+
+        if not service_reachable:
+            raise HTTPException(status_code=503, detail="Profile service unavailable")
 
         for key, path in [
             ("experiences", "/profile/me/experiences"),

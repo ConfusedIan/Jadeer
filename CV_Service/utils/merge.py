@@ -51,6 +51,6 @@ def merge_real_with_dummy(real: dict, dummy: dict) -> dict:
 
     for k in ("experiences", "education", "certificates", "skills"):
         rv = real.get(k)
-        out[k] = rv if rv else dummy[k]
+        out[k] = rv if rv is not None else dummy[k]
 
     return out
